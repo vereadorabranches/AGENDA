@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Calendário de Feiras Livres — Vale do Paraíba</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12244A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Feiras VP">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --white:#FFFFFF; --page:#FCFDFF; --line:#D9E4F5; --line-soft:#EAF1FC;
+    --ink:#1B2233; --ink-soft:#5B6577; --blue-navy:#12244A; --blue:#2A5FE0;
+    --blue-mid:#3E7BFF; --blue-soft:#E9F1FF; --blue-highlight:#CFE0FF;
+    --sun:#F4F7FD; --amber:#B5680B;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--page); color:var(--ink); font-family:'IBM Plex Sans', sans-serif;}
+  .app{display:grid; grid-template-columns:280px 1fr; min-height:100vh;}
+  @media (max-width:860px){.app{grid-template-columns:1fr;}}
+
+  /* ---------------- MOBILE (PWA) ---------------- */
+  @media (max-width:600px){
+    aside{padding:18px 16px 20px 16px;}
+    aside h1{font-size:19px;}
+    main{padding:18px 12px 40px 12px;}
+    .month-title h2{font-size:26px;}
+    .cal-header{margin-bottom:16px;}
+    .weekdays{display:none;}
+    .grid{
+      grid-template-columns:1fr;
+      border:none;
+    }
+    .cell{
+      border:1px solid var(--line);
+      border-radius:4px;
+      margin-bottom:8px;
+      min-height:auto;
+      padding:10px 12px;
+    }
+    .cell.blank{display:none;}
+    .cell .num{width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; background:var(--blue-soft); border-radius:50%; font-size:14px;}
+    .cell.today .num{background:var(--blue); color:#fff;}
+    .cell .cell-wd{display:inline-block; margin-left:8px; font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); vertical-align:middle;}
+    .cell .badges, .cell .more{margin-top:8px;}
+    .reg-pin{top:10px; right:10px;}
+    .modal-overlay{padding:0;}
+    .modal-card, .modal-card.wide{max-width:100%; height:100%; border-radius:0; display:flex; flex-direction:column;}
+    .modal-card .dbody{grid-template-columns:1fr; max-height:none; flex:1;}
+    .report-body{max-height:none;}
+    .form-row{grid-template-columns:1fr;}
+  }
+
+
+  /* ---------------- SIDEBAR ---------------- */
+  aside{background:var(--blue-navy); color:var(--white); padding:26px 22px 30px 22px; border-right:1px solid var(--line);}
+  aside .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#9FB6EE; margin-bottom:6px;}
+  aside h1{font-family:'Fraunces', serif; font-weight:700; font-size:22px; line-height:1.15; margin:0 0 22px 0;}
+  .field{margin-bottom:18px;}
+  .field label{display:block; font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#9FB6EE; margin-bottom:7px;}
+  .field select{width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13.5px; padding:10px 11px; border-radius:3px; border:1px solid #2C4478; background:#17305E; color:var(--white); appearance:none; -webkit-appearance:none;}
+  .field select:focus{outline:2px solid var(--blue-mid);}
+  .field select option{color:#111; background:#fff;}
+  .hint{font-size:12px; line-height:1.55; color:#B9C9EE; background:rgba(255,255,255,0.05); border-left:2px solid var(--blue-mid); padding:10px 12px; margin-top:6px;}
+  .legend{margin-top:26px; border-top:1px solid #24406F; padding-top:16px;}
+  .legend .lg-title{font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#9FB6EE; margin-bottom:10px;}
+  .legend .lg-row{display:flex; align-items:center; gap:8px; font-size:12.5px; margin-bottom:7px; color:#DCE6FA;}
+  .legend .dot{width:9px; height:9px; border-radius:50%; flex:none;}
+  button.clear, button.report-btn{width:100%; font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; padding:9px; border-radius:3px; cursor:pointer; margin-top:10px;}
+  button.clear{background:transparent; border:1px solid #3E5A94; color:#CFE0FF;}
+  button.clear:hover{background:#1E3A6B;}
+  button.report-btn{background:var(--blue-mid); border:1px solid var(--blue-mid); color:#fff;}
+  button.report-btn:hover{background:var(--blue);}
+
+  /* ---------------- MAIN ---------------- */
+  main{padding:34px 40px 60px 40px;}
+  .cal-header{display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:26px;}
+  .month-title{position:relative; display:inline-block;}
+  .month-title .brush{position:absolute; left:-10px; right:-14px; top:38%; height:46%; background:var(--blue-highlight); transform:rotate(-1.4deg); z-index:0; border-radius:3px;}
+  .month-title h2{position:relative; z-index:1; font-family:'Fraunces', serif; font-weight:800; font-size:clamp(32px, 5vw, 50px); color:var(--blue-navy); margin:0; text-transform:uppercase;}
+  .month-title .year{font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:15px; color:var(--blue); margin-left:10px; vertical-align:middle;}
+  .nav-controls{display:flex; align-items:center; gap:8px;}
+  .nav-controls button{width:34px; height:34px; border:1px solid var(--line); background:var(--white); color:var(--blue-navy); border-radius:3px; cursor:pointer; font-size:15px;}
+  .nav-controls button:hover{background:var(--blue-soft);}
+  .nav-controls select{font-family:'IBM Plex Sans', sans-serif; font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; background:var(--white); color:var(--ink);}
+
+  .weekdays{display:grid; grid-template-columns:repeat(7,1fr); border-bottom:2px solid var(--blue-navy); padding-bottom:8px; margin-bottom:2px;}
+  .weekdays div{font-family:'IBM Plex Sans', sans-serif; font-weight:700; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--blue); padding-left:4px;}
+
+  .grid{display:grid; grid-template-columns:repeat(7,1fr); border-left:1px solid var(--line); border-top:1px solid var(--line);}
+  .cell{border-right:1px solid var(--line); border-bottom:1px solid var(--line); min-height:132px; padding:8px 8px 10px 8px; background:var(--white); position:relative; cursor:pointer;}
+  .cell.blank{background:var(--sun); cursor:default;}
+  .cell:not(.blank):hover{background:var(--blue-soft);}
+  .cell.selected-day{outline:2px solid var(--blue); outline-offset:-2px;}
+  .cell .num{font-family:'Fraunces', serif; font-weight:600; font-size:15px; color:var(--ink);}
+  .cell .cell-wd{display:none;}
+  .cell.today .num{background:var(--blue); color:#fff; border-radius:50%; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-size:13px;}
+  .badges{margin-top:6px; display:flex; flex-direction:column; gap:3px;}
+  .badge{font-family:'IBM Plex Mono', monospace; font-size:10.3px; line-height:1.3; background:var(--blue-soft); color:var(--blue-navy); border-left:2px solid var(--blue); padding:2px 5px; border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .badge.reg{background:#FFF3E2; border-left-color:var(--amber); color:#7A4A08;}
+  .more{font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft); margin-top:2px;}
+  .dots{display:flex; gap:4px; margin-top:6px; flex-wrap:wrap;}
+  .dots .dot{width:8px; height:8px; border-radius:50%;}
+  .reg-pin{position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:var(--amber);}
+
+  footer.note{margin-top:26px; font-size:11.5px; color:var(--ink-soft); line-height:1.6; border-left:3px solid var(--blue); padding-left:14px;}
+
+  /* ---------------- MODAL (popup do dia + relatório) ---------------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(18,36,74,0.55);
+    display:none; align-items:flex-start; justify-content:center;
+    z-index:1000; padding:40px 16px; overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-card{
+    background:var(--white); border-radius:6px; width:100%; max-width:760px;
+    box-shadow:0 20px 50px rgba(18,36,74,0.35); overflow:hidden;
+  }
+  .modal-card.wide{max-width:920px;}
+  .modal-card .dhead{background:var(--blue-navy); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .modal-card .dhead h3{font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin:0;}
+  .dhead-actions{display:flex; gap:8px; flex-wrap:wrap;}
+  .modal-card .dhead button{background:transparent; border:1px solid #3E5A94; color:#CFE0FF; font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; padding:6px 10px; border-radius:3px; cursor:pointer;}
+  .modal-card .dhead button:hover{background:#1E3A6B;}
+  .modal-card .dhead button.primary-hd{background:var(--blue-mid); border-color:var(--blue-mid); color:#fff;}
+  .modal-card .dhead button.primary-hd:hover{background:var(--blue);}
+  .modal-card .dbody{padding:18px 20px; background:var(--white); display:grid; grid-template-columns:1fr 1fr; gap:26px; max-height:74vh; overflow-y:auto;}
+  @media (max-width:760px){.modal-card .dbody{grid-template-columns:1fr;}}
+  .modal-card h4{font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); margin:0 0 12px 0;}
+
+  .feira-item{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--line-soft); font-size:12.8px;}
+  .feira-item:last-child{border-bottom:none;}
+  .feira-item .fi-main strong{color:var(--blue-navy); font-family:'IBM Plex Sans', sans-serif;}
+  .feira-item .fi-main span{display:block; color:var(--ink-soft); font-size:11.3px; margin-top:2px;}
+  .feira-item button{flex:none; font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase; background:var(--blue-soft); border:1px solid var(--line); color:var(--blue-navy); padding:5px 8px; border-radius:3px; cursor:pointer; white-space:nowrap;}
+  .feira-item button:hover{background:var(--blue-highlight);}
+  .empty-note{font-size:12.5px; color:var(--ink-soft); padding:6px 0;}
+
+  .reg-card{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:3px; padding:10px 12px; margin-bottom:10px; background:#FFFBF4;}
+  .reg-card .rc-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .reg-card .rc-tipo{font-family:'IBM Plex Mono', monospace; font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--amber); background:#FFF0D9; padding:2px 6px; border-radius:2px; display:inline-block; margin-bottom:5px;}
+  .reg-card .rc-title{font-family:'IBM Plex Sans', sans-serif; font-weight:600; font-size:13.5px; color:var(--ink);}
+  .reg-card .rc-meta{font-size:11.8px; color:var(--ink-soft); margin-top:4px; line-height:1.5;}
+  .reg-card .rc-actions{display:flex; gap:6px; flex:none;}
+  .reg-card .rc-actions button{font-family:'IBM Plex Mono', monospace; font-size:10px; border:1px solid var(--line); background:#fff; padding:4px 7px; border-radius:3px; cursor:pointer; color:var(--ink-soft);}
+  .reg-card .rc-actions button:hover{background:var(--blue-soft); color:var(--blue-navy);}
+
+  .form-registro{grid-column:1 / -1; border-top:1px solid var(--line); padding-top:18px; margin-top:4px;}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+  .form-registro input, .form-registro select, .form-registro textarea{
+    width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; padding:9px 10px;
+    border:1px solid var(--line); border-radius:3px; background:#fff; color:var(--ink); margin-bottom:10px;
+  }
+  .form-registro textarea{min-height:56px; resize:vertical;}
+  .form-registro input:focus, .form-registro select:focus, .form-registro textarea:focus{outline:2px solid var(--blue-mid); border-color:var(--blue-mid);}
+  .form-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .btn-primary{background:var(--blue); color:#fff; border:none; font-family:'IBM Plex Sans', sans-serif; font-weight:600; font-size:13px; padding:10px 18px; border-radius:3px; cursor:pointer;}
+  .btn-primary:hover{background:var(--blue-navy);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink-soft); font-family:'IBM Plex Sans', sans-serif; font-size:13px; padding:10px 14px; border-radius:3px; cursor:pointer;}
+  .form-msg{font-size:12px; color:var(--ink-soft);}
+  .form-msg.ok{color:#2E7D32;}
+  .form-msg.err{color:#B3261E;}
+  .loading-txt{font-size:12.5px; color:var(--ink-soft); font-style:italic;}
+
+  /* report modal specifics */
+  .report-controls{display:flex; gap:8px; flex-wrap:wrap; padding:16px 20px 0 20px;}
+  .report-controls button{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    padding:8px 12px; border:1px solid var(--line); background:var(--blue-soft); color:var(--blue-navy);
+    border-radius:3px; cursor:pointer;
+  }
+  .report-controls button:hover{background:var(--blue-highlight);}
+  .report-controls button.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .report-filter-note{padding:10px 20px 0 20px; font-size:11.5px; color:var(--ink-soft);}
+  .report-body{padding:16px 20px 22px 20px; max-height:64vh; overflow-y:auto;}
+  .rep-day{margin-bottom:16px; border-bottom:1px solid var(--line-soft); padding-bottom:12px;}
+  .rep-day .rd-head{font-family:'Fraunces', serif; font-weight:600; font-size:14px; color:var(--blue-navy); margin-bottom:8px;}
+  .rep-day .rd-item{display:flex; gap:8px; align-items:flex-start; font-size:12.5px; margin-bottom:5px; line-height:1.4;}
+  .rep-day .rd-item .rd-dot{width:8px; height:8px; border-radius:50%; margin-top:4px; flex:none;}
+  .rep-day .rd-item .rd-txt strong{font-family:'IBM Plex Sans', sans-serif;}
+  .rep-day .rd-item .rd-txt span{display:block; color:var(--ink-soft); font-size:11.2px;}
+
+  /* ---------------- PRINT ---------------- */
+  #printArea{display:none;}
+  @media print{
+    body > *:not(#printArea){display:none !important;}
+    #printArea{display:block !important; padding:0; margin:0;}
+    .pa-page{page-break-after:always; padding:14mm;}
+    .pa-page:last-child{page-break-after:auto;}
+  }
+  .pa-title{font-family:'Fraunces', serif; font-weight:800; font-size:24px; color:#12244A; margin:0 0 2px 0;}
+  .pa-sub{font-family:'IBM Plex Mono', monospace; font-size:11px; color:#5B6577; margin-bottom:16px; text-transform:uppercase; letter-spacing:.06em;}
+  .pa-section h5{font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#2A5FE0; border-bottom:1px solid #D9E4F5; padding-bottom:4px; margin:16px 0 8px 0;}
+  .pa-row{display:grid; grid-template-columns:90px 1fr; gap:10px; padding:6px 0; border-bottom:1px dotted #D9E4F5; font-size:12.5px; font-family:'IBM Plex Sans', sans-serif;}
+  .pa-row .pa-h{font-family:'IBM Plex Mono', monospace; color:#12244A; font-weight:600;}
+  .pa-row .pa-b strong{display:block;}
+  .pa-row .pa-b span{display:block; color:#5B6577; font-size:11px; margin-top:1px;}
+  .pa-empty{font-size:12px; color:#5B6577; font-style:italic; padding:4px 0;}
+  .pa-day-block{margin-bottom:14px;}
+  .pa-day-block h6{font-family:'Fraunces', serif; font-size:14px; font-weight:600; margin:10px 0 4px 0; color:#12244A;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside>
+    <div class="eyebrow">Vale do Paraíba — planejamento</div>
+    <h1>Calendário de<br>Feiras Livres</h1>
+
+    <div class="field">
+      <label for="selCidade">Cidade</label>
+      <select id="selCidade"></select>
+    </div>
+    <div class="field">
+      <label for="selDia">Dia da semana</label>
+      <select id="selDia"></select>
+    </div>
+    <div class="field">
+      <label for="selFeira">Feira / horário</label>
+      <select id="selFeira"></select>
+    </div>
+
+    <div class="hint" id="hint">Escolha uma cidade para ver os dias de feira disponíveis no calendário.</div>
+    <button class="clear" id="btnClear">Limpar seleção</button>
+    <button class="report-btn" id="btnOpenReport">Relatório da agenda</button>
+
+    <div class="legend" id="legend" style="display:none;">
+      <div class="lg-title">Cidades no mapa</div>
+      <div id="legendRows"></div>
+    </div>
+
+    <div class="legend" style="border-top:1px solid #24406F; margin-top:20px; padding-top:16px;">
+      <div class="lg-title">Marcadores</div>
+      <div class="lg-row"><span class="dot" style="background:#3E7BFF;"></span>Feira livre (dado da fonte)</div>
+      <div class="lg-row"><span class="dot" style="background:#B5680B;"></span>Seu registro (reunião, visita, nota)</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="cal-header">
+      <div class="month-title">
+        <span class="brush"></span>
+        <h2 id="monthLabel">Agosto <span class="year" id="yearLabel">2026</span></h2>
+      </div>
+      <div class="nav-controls">
+        <button id="prevMonth" aria-label="Mês anterior">‹</button>
+        <select id="selMes"></select>
+        <select id="selAno"></select>
+        <button id="nextMonth" aria-label="Próximo mês">›</button>
+      </div>
+    </div>
+
+    <div class="weekdays">
+      <div>Domingo</div><div>Segunda</div><div>Terça</div><div>Quarta</div><div>Quinta</div><div>Sexta</div><div>Sábado</div>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <footer class="note">
+      <strong>Como usar:</strong> clique em qualquer dia do calendário para abrir o popup com as feiras oficiais daquele dia e o cadastro de reunião/registro. Dentro do popup dá para imprimir a agenda do dia. Use "Relatório da agenda" na lateral para ver e imprimir a semana, o mês ou um período (ex.: agosto a outubro, ou os próximos 60 dias).
+    </footer>
+  </main>
+</div>
+
+<!-- ---------------- POPUP DO DIA ---------------- -->
+<div class="modal-overlay" id="dayModalOverlay">
+  <div class="modal-card">
+    <div class="dhead">
+      <h3 id="detailTitle">Detalhes do dia</h3>
+      <div class="dhead-actions">
+        <button class="primary-hd" id="printDayBtn">Imprimir agenda</button>
+        <button id="closeDetail">Fechar</button>
+      </div>
+    </div>
+    <div class="dbody">
+      <div>
+        <h4>Feiras nesse dia (fonte oficial)</h4>
+        <div id="feirasList"></div>
+      </div>
+      <div>
+        <h4>Meus registros</h4>
+        <div id="registrosList"><div class="loading-txt">Carregando…</div></div>
+      </div>
+      <div class="form-registro">
+        <h4 id="formHeading">Cadastro de reunião / registro</h4>
+        <div class="form-row">
+          <select id="fTipo">
+            <option value="feira">Ir à feira</option>
+            <option value="reuniao">Reunião</option>
+            <option value="outro">Outro</option>
+          </select>
+          <select id="fFeiraRef" style="display:none;"></select>
+        </div>
+        <input id="fTitulo" placeholder="Título / assunto (ex: Visita à feira, Reunião com fornecedor)">
+        <div class="form-row">
+          <input id="fHorario" placeholder="Horário (ex: 14h30)">
+          <input id="fPessoa" placeholder="Com quem (nome)">
+        </div>
+        <input id="fLocal" placeholder="Local">
+        <textarea id="fObs" placeholder="Observações"></textarea>
+        <div class="form-actions">
+          <button class="btn-primary" id="btnSalvar">Salvar registro</button>
+          <button class="btn-ghost" id="btnCancelEdit" style="display:none;">Cancelar edição</button>
+          <span class="form-msg" id="formMsg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ---------------- POPUP DE RELATÓRIO ---------------- -->
+<div class="modal-overlay" id="reportModalOverlay">
+  <div class="modal-card wide">
+    <div class="dhead">
+      <h3>Relatório da agenda</h3>
+      <div class="dhead-actions">
+        <button class="primary-hd" id="printReportBtn">Imprimir</button>
+        <button id="closeReport">Fechar</button>
+      </div>
+    </div>
+    <div class="report-controls">
+      <button data-range="week">Esta semana</button>
+      <button data-range="month">Este mês</button>
+      <button data-range="60days">Próximos 60 dias</button>
+      <button data-range="augoct">Agosto a outubro 2026</button>
+    </div>
+    <div class="report-filter-note" id="reportFilterNote"></div>
+    <div class="report-body" id="reportBody"><div class="loading-txt">Selecione um período acima.</div></div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const WEEKDAY_NAMES = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+
+const feirasPorCidade = {
+"São José dos Campos": [
+ ["Terça-feira","7h às 14h","Residencial Tatetuba","R. Badue Cury — Leste"],
+ ["Terça-feira","7h às 14h","Vila Igualdade","Pça. Romão Gomes — Centro"],
+ ["Terça-feira","7h às 14h","Jardim Azevedo","Av. Dr. Ademar de Barros — Centro"],
+ ["Terça-feira","7h às 14h","Parque Santos Dumont","Centro"],
+ ["Terça-feira","7h às 14h","Jd. Esplanada II","Pça. Pedro David — Centro"],
+ ["Terça-feira","7h às 14h","Jd. Uirá","R. Canindés — Sudeste"],
+ ["Terça-feira","7h às 14h","Urbanova 5 / Altos da Serra 2","Av. Plínio Pedrosa Dias — Oeste"],
+ ["Quarta-feira","7h às 14h","Vila Maria","Av. dos Estados, nº 55–200 — Centro"],
+ ["Quarta-feira","7h às 14h","Jd. São Dimas","Pça. Monsenhor Ascânio Brandão — Centro"],
+ ["Quarta-feira","7h às 14h","Jd. Veneza","Rua Icatu, nº 446 — Sul"],
+ ["Quarta-feira","7h às 14h","Jd. Satélite","R. Antares — Sul"],
+ ["Quarta-feira","7h às 14h","Pq. Industrial","R. Turiaçú, nº 41–2710 — Sul"],
+ ["Quarta-feira","7h às 14h","Jd. São Vicente","Av. José Pedro, nº 451–480 — Leste"],
+ ["Quarta-feira","17h às 21h","Santana (Feira Noturna)","R. Olívo Gomes, 100 — Parque da Cidade — Norte"],
+ ["Quarta-feira","7h às 14h","Jd. Valparaíba","R. das Telefonistas — Leste"],
+ ["Quinta-feira","7h às 14h","Santana","R. Raul Ramos de Araújo c/ R. da Consolação — Norte"],
+ ["Quinta-feira","7h às 14h","Bosque dos Eucaliptos","Av. Ouro Fino — Sul"],
+ ["Quinta-feira","7h às 14h","Jd. das Indústrias","R. Nélson César de Oliveira — Oeste"],
+ ["Quinta-feira","7h às 14h","Putim","R. Três — Res. Tom Jobim — Sudeste"],
+ ["Quinta-feira","7h às 14h","Jd. das Cerejeiras","Av. 8 de Dezembro — Leste"],
+ ["Sexta-feira","7h às 14h","Vila Ema","R. Major Vaz / R. Santa Clara — Centro"],
+ ["Sexta-feira","7h às 14h","Jd. da Granja","Rua Fênix — Sudeste"],
+ ["Sexta-feira","7h às 14h","Bosque dos Eucaliptos","R. Pedro Martins Ribeiro — Sul"],
+ ["Sexta-feira","7h às 14h","Jd. do Céu","Pça. Yamagata — Sul"],
+ ["Sexta-feira","7h às 14h","Jd. Aquarius","Pça. Severo Gomes — Oeste"],
+ ["Sexta-feira","17h às 22h","Jd. Satélite (Feira Noturna)","Rua Antares, Expo Vale Sul — Sul"],
+ ["Sábado","7h às 14h","Jd. São José","R. Turmalina — Centro"],
+ ["Sábado","7h às 14h","Altos de Santana","R. Serra de Santa Bárbara / R. Pico da Neblina — Norte"],
+ ["Sábado","7h às 14h","Residencial Galo Branco","Av. Agenor Alves dos Santos — Leste"],
+ ["Sábado","7h às 14h","Vila Industrial","R. Ademar Figueiredo Lira — Leste"],
+ ["Sábado","7h às 14h","Pq. Industrial","R. Pimenteiras — Sul"],
+ ["Sábado","7h às 14h","Vista Verde","R. Gustavo Rico Toro — Leste"],
+ ["Sábado","7h às 14h","Jd. Esplanada (Produtos Ecológicos)","Praça Sinésio Martins — Centro"],
+ ["Sábado","7h às 14h","Setville","Rua Gilberto Trunki — Leste"],
+ ["Domingo","7h às 14h","Jd. Morumbi","Av. Elísio Galdino Sobrinho — Sul"],
+ ["Domingo","7h às 14h","Santana","R. São Jorge — Norte"],
+ ["Domingo","7h às 14h","São Judas Tadeu","R. São Vitalino — Norte"],
+ ["Domingo","7h às 14h","Pq. Interlagos","R. Ubirajara Raimundo de Souza — Sudeste"],
+ ["Domingo","7h às 14h","Conjunto Dom Pedro II","Rua 32 — Sul"],
+ ["Domingo","7h às 14h","Vila Letônia","Av. Suíça — Sul"],
+ ["Domingo","7h às 14h","Campo dos Alemães","Av. Padre Wilson Cunha — Sul"],
+ ["Domingo","7h às 14h","Jardim Colonial","Av. José Ribeiro Bastos — Sul"],
+ ["Domingo","7h às 14h","Jardim Satélite","Pça. Mário Cesare Porto / R. Itapuã — Sul"],
+ ["Domingo","7h às 14h","Pq. Novo Horizonte","Pça. 1º de Maio / R. dos Lavradores — Sul"],
+ ["Domingo","7h às 14h","Campos de São José","R. Benedito de Paula Ferreira — Leste"],
+],
+"Jacareí": [
+ ["Terça-feira","Não informado","Jardim das Indústrias (Feira I)","Rua São Jerônimo"],
+ ["Terça-feira","Não informado","Parque Santo Antônio (Feira II)","Rua das Dálias"],
+ ["Terça-feira","Não informado","Parque Califórnia (Feira III)","Rua Alziro de Oliveira Santos"],
+ ["Quarta-feira","Não informado","Jardim Paraíba (Feira Livre I)","Av. Major Acácio Ferreira"],
+ ["Quarta-feira","Não informado","Vila Garcia (Feira Livre II)","Rua Manoel Martins Fernandes"],
+ ["Quinta-feira","Não informado","Jardim Bela Vista (Feira Livre I)","Rua João Porto com Rua Denise"],
+ ["Quinta-feira","Não informado","Bandeira Branca II (Feira Livre III)","Rua Rosária Maria da Conceição"],
+ ["Sexta-feira","Não informado","Parque Itamarati (Feira Livre I)","Rua Conselheiro Antonio Prado"],
+ ["Sexta-feira","Não informado","Parque dos Príncipes (Feira Livre II)","Rua Príncipe Hans Adams de Liechtenstein"],
+ ["Sexta-feira","Não informado","Vila Machado (Feira Livre III)","Rua José Mega"],
+ ["Sábado","Não informado","Jardim Santa Maria (Feira Livre I)","Rua Vereador Afonso Rosa da Silva"],
+ ["Sábado","Não informado","Jardim Nova Esperança (Feira Livre II)","Av. Sebastião Lopes"],
+ ["Sábado","Não informado","Jardim do Vale (Feira Livre III)","Av. Lafayetti Benedito Prianti"],
+ ["Domingo","Não informado","Jardim Didinha (Feira Livre I)","Av. Pereira Campos"],
+ ["Domingo","Não informado","Villa Branca (Feira Livre I e II)","Av. das Letras"],
+ ["Domingo","Não informado","Parque Meia Lua (Feira Livre II)","Rua Takeo Ota"],
+ ["Domingo","Não informado","Jardim Paraíso (Feira Livre II)","Rua Dr. Nelson da Costa Marrelli"],
+ ["Domingo","Não informado","Cidade Salvador (Feira Livre III)","Rua Mogi das Cruzes"],
+],
+"Taubaté": [
+ ["Terça-feira","6h às 12h","Vila Aparecida","Rua Ana Perpétua Marques"],
+ ["Quarta-feira","6h às 12h","Esplanada Santa Terezinha","Rua Antonio Candido de Oliveira Filho"],
+ ["Quarta-feira","6h às 12h","Parque Três Marias","Rua Armando de Moura"],
+ ["Quinta-feira","6h às 12h","Vila São José","Praça da Inconfidência"],
+ ["Sexta-feira","6h às 12h","Vila São Geraldo","Rua Sagrado Coração de Jesus"],
+ ["Sábado","6h às 12h","Cecap","Rua Firmo Mendes de Castilho"],
+ ["Domingo","6h às 12h","Estiva","Avenida Vila Rica"],
+],
+"Caçapava": [
+ ["Segunda-feira","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Terça-feira","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Quarta-feira","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Quinta-feira","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Sexta-feira","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Sábado","6h às 14h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+ ["Domingo","6h às 13h","Centro (PAT — confirmar se é feira)","Av. Pres. Roosevelt, 100"],
+],
+"Aparecida": [
+ ["Terça-feira","6h às 12h","Vila Mariana (hortifruti)","Rua Vicente de Almeida"],
+ ["Quinta-feira","6h às 12h","Centro — Praça Kennedy (hortifruti)","Av. Padroeira do Brasil"],
+ ["Sexta-feira","6h às 12h","Itaguaçu (hortifruti)","Rua Itabaiana"],
+ ["Sábado","7h às 17h","Centro — Feira-Livre","Av. Papa João Paulo II"],
+ ["Sábado","7h às 17h","Centro — Feira de Artesanato","Praça Dr. Benedito Meirelles"],
+ ["Domingo","7h às 17h","Centro — Feira-Livre","Av. Papa João Paulo II"],
+ ["Domingo","7h às 17h","Centro — Feira de Artesanato","Praça Dr. Benedito Meirelles"],
+ ["Domingo","6h às 12h","Ponte Alta (hortifruti)","Rua Joaquim Alves Pereira"],
+],
+"Campos do Jordão": [
+ ["Terça-feira","A partir das 8h","Vila Ferraz","Praça Octávio Bittencourt"],
+],
+"Guaratinguetá": [
+ ["Terça-feira","5h às 12h","Feira da Cabelinha","Rua Pe. Hugo Grecco / Av. Bernardino de Campos"],
+ ["Quarta-feira","5h às 12h","Feira Parque das Rodovias","Rua João Augusto de Lima"],
+ ["Quinta-feira","5h às 12h","Feira Vila Hepacaré","Estrada Santa Terezinha, perto da Rodoviária"],
+ ["Sábado","5h às 12h","Feira Vila Geny","Av. João Pinto Antunes"],
+ ["Sábado","5h às 12h","Feira Centro","Av. Capitão Messias Ribeiro"],
+ ["Domingo","5h às 12h","Feira Bairro da Cruz","Av. Sete de Setembro"],
+],
+"Atibaia": [
+ ["Terça-feira","6h às 13h","Praça Brasília — Alvinópolis",""],
+ ["Quarta-feira","17h às 22h","Estac. Centro de Convenções (Noturna)",""],
+ ["Quinta-feira","6h às 13h","Bairro do Portão — ao lado do Posto de Saúde",""],
+ ["Quinta-feira","6h às 13h","Pátio das Diretas — Mercado Municipal",""],
+ ["Quinta-feira","17h às 22h","Pça. Migrante Nordestino — Jd. Imperial (Noturna)",""],
+ ["Sexta-feira","6h às 13h","Rua Dora — Caetetuba",""],
+ ["Sexta-feira","17h às 22h","Estac. Centro de Convenções (Noturna)",""],
+ ["Sábado","6h às 13h","Av. Major Alvim — Cristo Rei, Alvinópolis",""],
+ ["Sábado","6h às 13h","Rua Pacaembu — Jardim Imperial",""],
+ ["Domingo","6h às 13h","Rua Alcebíades Chicaroni — Jd. Alvinópolis",""],
+ ["Domingo","6h às 13h","Pátio das Diretas — Mercado Municipal",""],
+ ["Domingo","6h às 13h","Rua José de Campos — Jardim Cerejeiras",""],
+ ["Domingo","6h às 13h","Praça Soldado Constitucionalista — Bairro do Tanque",""],
+],
+};
+
+const CIDADES = Object.keys(feirasPorCidade);
+const CORES = ["#1E4FD8","#2F8FED","#14A6A6","#5B6BD6","#3AA0D1","#1D6FA5","#6C63FF","#0E7C86"];
+const corPorCidade = {};
+CIDADES.forEach((c,i)=>corPorCidade[c]=CORES[i%CORES.length]);
+const ABREV = {
+  "São José dos Campos":"SJC",
+  "Jacareí":"JCI",
+  "Taubaté":"TBT",
+  "Caçapava":"CAC",
+  "Aparecida":"APA",
+  "Campos do Jordão":"CJO",
+  "Guaratinguetá":"GTA",
+  "Atibaia":"ATB",
+};
+
+// ---------- estado ----------
+const hoje = new Date();
+let viewMonth = hoje.getMonth();
+let viewYear = hoje.getFullYear();
+let selCidade = "";
+let selDia = "";
+let selFeiraIdx = "";
+let selectedDate = null;
+let monthRegCounts = {};
+let currentDayRegs = [];
+let editingId = null;
+
+// ---------- storage helpers ----------
+function dayKey(y,m,d){ return `evt:${y}-${m}-${d}`; }
+
+async function loadMonthRegCounts(){
+  monthRegCounts = {};
+  try{
+    const prefix = `evt:${viewYear}-${viewMonth}-`;
+    const res = await window.storage.list(prefix, false);
+    const keys = res ? res.keys : [];
+    await Promise.all(keys.map(async k=>{
+      try{
+        const r = await window.storage.get(k, false);
+        if(r && r.value){
+          const arr = JSON.parse(r.value);
+          const d = k.split('-').pop();
+          monthRegCounts[d] = Array.isArray(arr) ? arr.length : 0;
+        }
+      }catch(e){}
+    }));
+  }catch(e){ monthRegCounts = {}; }
+}
+async function loadDayRegs(y,m,d){
+  try{
+    const r = await window.storage.get(dayKey(y,m,d), false);
+    return r && r.value ? JSON.parse(r.value) : [];
+  }catch(e){ return []; }
+}
+async function saveDayRegs(y,m,d,list){
+  try{ const res = await window.storage.set(dayKey(y,m,d), JSON.stringify(list), false); return !!res; }
+  catch(e){ return false; }
+}
+
+// ---------- selects fixos ----------
+function popMesAno(){
+  const mesSel = document.getElementById('selMes');
+  MESES.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m; mesSel.appendChild(o); });
+  mesSel.value = viewMonth;
+  const anoSel = document.getElementById('selAno');
+  for(let y=2025; y<=2027; y++){ const o=document.createElement('option'); o.value=y; o.textContent=y; anoSel.appendChild(o); }
+  anoSel.value = viewYear;
+}
+function popCidade(){
+  const sel = document.getElementById('selCidade');
+  sel.innerHTML = '<option value="">Todas as cidades</option>';
+  CIDADES.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+}
+function diasDisponiveis(cidade){
+  if(!cidade) return WEEKDAY_NAMES.slice();
+  const set = new Set();
+  feirasPorCidade[cidade].forEach(f=>{
+    if(f[0]==="Segunda-feira"){ WEEKDAY_NAMES.slice(1).forEach(d=>set.add(d)); }
+    else set.add(f[0]);
+  });
+  return WEEKDAY_NAMES.filter(d=>set.has(d));
+}
+function popDia(){
+  const sel = document.getElementById('selDia');
+  const dias = diasDisponiveis(selCidade);
+  sel.innerHTML = '<option value="">Todos os dias</option>';
+  dias.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; sel.appendChild(o); });
+  if(dias.includes(selDia)){ sel.value = selDia; } else { selDia=""; sel.value=""; }
+}
+function entriesFor(cidade, dia){
+  let list = [];
+  const cidades = cidade ? [cidade] : CIDADES;
+  cidades.forEach(c=>{
+    feirasPorCidade[c].forEach(f=>{
+      const matchesDia = !dia || f[0]===dia || (f[0]==="Segunda-feira" && dia!=="Domingo");
+      if(matchesDia) list.push({cidade:c, dia:f[0], horario:f[1], bairro:f[2], endereco:f[3]});
+    });
+  });
+  return list;
+}
+function popFeira(){
+  const sel = document.getElementById('selFeira');
+  const list = entriesFor(selCidade, selDia);
+  sel.innerHTML = '<option value="">Todas as feiras da seleção</option>';
+  list.forEach((e,i)=>{
+    const o=document.createElement('option'); o.value=i;
+    o.textContent = `${e.bairro} — ${e.horario}${!selCidade ? " ("+e.cidade+")" : ""}`;
+    sel.appendChild(o);
+  });
+  selFeiraIdx = ""; sel.value = "";
+}
+function updateHint(){
+  const hint = document.getElementById('hint');
+  if(!selCidade){ hint.textContent = "Escolha uma cidade para ver os dias de feira disponíveis no calendário."; }
+  else if(!selDia){ hint.textContent = `Mostrando todos os dias de feira em ${selCidade}. Escolha um dia da semana para refinar.`; }
+  else { hint.textContent = `Mostrando feiras de ${selCidade} — ${selDia.toLowerCase()}s.`; }
+}
+function currentEntryList(){
+  let list = entriesFor(selCidade, selDia);
+  if(selFeiraIdx !== ""){ const chosen = list[parseInt(selFeiraIdx)]; return chosen ? [chosen] : list; }
+  return list;
+}
+function weekdayNameFromDate(date){ return WEEKDAY_NAMES[date.getDay()]; }
+function fmtDateLabel(d){ return `${weekdayNameFromDate(d)}, ${d.getDate()} de ${MESES[d.getMonth()].toLowerCase()} de ${d.getFullYear()}`; }
+
+// ---------- calendário ----------
+async function buildGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = "";
+  const first = new Date(viewYear, viewMonth, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const list = currentEntryList();
+
+  await loadMonthRegCounts();
+
+  for(let i=0;i<startWeekday;i++){
+    const cell = document.createElement('div');
+    cell.className = "cell blank";
+    grid.appendChild(cell);
+  }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const dateObj = new Date(viewYear, viewMonth, d);
+    const wd = weekdayNameFromDate(dateObj);
+    const isToday = dateObj.toDateString() === hoje.toDateString();
+    const filteredMatches = list.filter(e=>e.dia===wd);
+    const regCount = monthRegCounts[String(d)] || 0;
+
+    const cell = document.createElement('div');
+    cell.className = "cell" + (isToday?" today":"");
+    cell.dataset.day = d;
+
+    let inner = `<span class="num">${d}</span><span class="cell-wd">${wd.replace('-feira','')}</span>`;
+    if(regCount>0){ inner += `<span class="reg-pin" title="${regCount} registro(s)"></span>`; }
+
+    if(filteredMatches.length){
+      const capacidade = selCidade ? 3 : 3;
+      const shown = filteredMatches.slice(0, capacidade);
+      inner += `<div class="badges">` + shown.map(e=>{
+        const rotulo = selCidade ? `${e.bairro} · ${e.horario}` : `${ABREV[e.cidade]||e.cidade} — ${e.bairro} · ${e.horario}`;
+        const cor = corPorCidade[e.cidade];
+        return `<div class="badge" style="border-left-color:${cor}" title="${e.cidade} — ${e.bairro} (${e.horario})">${rotulo}</div>`;
+      }).join("") + `</div>`;
+      if(filteredMatches.length > capacidade){ inner += `<div class="more">+${filteredMatches.length-capacidade} feira(s) — clique para ver tudo</div>`; }
+    }
+    if(regCount>0 && !filteredMatches.length){
+      inner += `<div class="badges"><div class="badge reg">${regCount} registro(s)</div></div>`;
+    }
+
+    cell.innerHTML = inner;
+    cell.addEventListener('click', ()=> openDay(dateObj, cell));
+    grid.appendChild(cell);
+  }
+}
+
+// ---------- popup do dia ----------
+async function openDay(dateObj, cellEl){
+  selectedDate = dateObj;
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('selected-day'));
+  if(cellEl) cellEl.classList.add('selected-day');
+
+  document.getElementById('dayModalOverlay').classList.add('open');
+  document.getElementById('detailTitle').textContent = fmtDateLabel(dateObj);
+
+  const wd = weekdayNameFromDate(dateObj);
+  const allDay = entriesFor("", "").filter(e=>e.dia===wd);
+  const feirasList = document.getElementById('feirasList');
+  if(!allDay.length){
+    feirasList.innerHTML = `<div class="empty-note">Nenhuma feira oficial cadastrada para esse dia da semana.</div>`;
+  } else {
+    feirasList.innerHTML = allDay.map((e,i)=>`
+      <div class="feira-item">
+        <div class="fi-main"><strong>${e.cidade}</strong> — ${e.bairro}<span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
+        <button data-idx="${i}" class="use-feira">Usar</button>
+      </div>
+    `).join("");
+    feirasList.querySelectorAll('.use-feira').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const e = allDay[parseInt(btn.dataset.idx)];
+        document.getElementById('fTipo').value = "feira";
+        toggleFeiraRefSelect();
+        document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
+        document.getElementById('fHorario').value = e.horario;
+        document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
+        document.getElementById('fTitulo').focus();
+      });
+    });
+  }
+
+  await refreshRegistros();
+  resetForm();
+}
+
+function closeDayModal(){
+  document.getElementById('dayModalOverlay').classList.remove('open');
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('selected-day'));
+  selectedDate = null;
+}
+
+async function refreshRegistros(){
+  const regList = document.getElementById('registrosList');
+  regList.innerHTML = `<div class="loading-txt">Carregando…</div>`;
+  const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
+  currentDayRegs = await loadDayRegs(y,m,d);
+  if(!currentDayRegs.length){
+    regList.innerHTML = `<div class="empty-note">Nenhum registro seu ainda para esse dia.</div>`;
+    return;
+  }
+  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  regList.innerHTML = currentDayRegs.map(r=>`
+    <div class="reg-card" data-id="${r.id}">
+      <div class="rc-top">
+        <div>
+          <span class="rc-tipo">${tipoLabel[r.tipo]||"Outro"}</span>
+          <div class="rc-title">${r.titulo || "(sem título)"}</div>
+          <div class="rc-meta">
+            ${r.horario ? `⏰ ${r.horario}<br>`:""}
+            ${r.pessoa ? `👤 ${r.pessoa}<br>`:""}
+            ${r.local ? `📍 ${r.local}<br>`:""}
+            ${r.obs ? `📝 ${r.obs}`:""}
+          </div>
+        </div>
+        <div class="rc-actions">
+          <button class="edit-reg">Editar</button>
+          <button class="del-reg">Excluir</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  regList.querySelectorAll('.edit-reg').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.reg-card').dataset.id;
+      const r = currentDayRegs.find(x=>x.id===id);
+      if(!r) return;
+      editingId = id;
+      document.getElementById('fTipo').value = r.tipo;
+      toggleFeiraRefSelect();
+      document.getElementById('fTitulo').value = r.titulo || "";
+      document.getElementById('fHorario').value = r.horario || "";
+      document.getElementById('fPessoa').value = r.pessoa || "";
+      document.getElementById('fLocal').value = r.local || "";
+      document.getElementById('fObs').value = r.obs || "";
+      document.getElementById('formHeading').textContent = "Editar registro";
+      document.getElementById('btnSalvar').textContent = "Salvar alteração";
+      document.getElementById('btnCancelEdit').style.display = "inline-block";
+      document.getElementById('fTitulo').focus();
+    });
+  });
+  regList.querySelectorAll('.del-reg').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.closest('.reg-card').dataset.id;
+      const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
+      currentDayRegs = currentDayRegs.filter(x=>x.id!==id);
+      const ok = await saveDayRegs(y,m,d,currentDayRegs);
+      if(ok){
+        await refreshRegistros(); await buildGrid();
+        const cell=[...document.querySelectorAll('.cell')].find(c=>parseInt(c.dataset.day)===selectedDate.getDate());
+        if(cell) cell.classList.add('selected-day');
+      }
+    });
+  });
+}
+
+function toggleFeiraRefSelect(){
+  const tipo = document.getElementById('fTipo').value;
+  const ref = document.getElementById('fFeiraRef');
+  if(tipo === "feira" && selectedDate){
+    const wd = weekdayNameFromDate(selectedDate);
+    const allDay = entriesFor("", "").filter(e=>e.dia===wd);
+    ref.innerHTML = '<option value="">— selecionar feira (opcional) —</option>' + allDay.map((e,i)=>`<option value="${i}">${e.cidade} — ${e.bairro} (${e.horario})</option>`).join("");
+    ref.style.display = "block";
+    ref.onchange = ()=>{
+      if(ref.value===""){return;}
+      const e = allDay[parseInt(ref.value)];
+      document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
+      document.getElementById('fHorario').value = e.horario;
+      document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
+    };
+  } else {
+    ref.style.display = "none";
+  }
+}
+
+function resetForm(){
+  editingId = null;
+  document.getElementById('fTipo').value = "feira";
+  toggleFeiraRefSelect();
+  document.getElementById('fTitulo').value = "";
+  document.getElementById('fHorario').value = "";
+  document.getElementById('fPessoa').value = "";
+  document.getElementById('fLocal').value = "";
+  document.getElementById('fObs').value = "";
+  document.getElementById('formHeading').textContent = "Cadastro de reunião / registro";
+  document.getElementById('btnSalvar').textContent = "Salvar registro";
+  document.getElementById('btnCancelEdit').style.display = "none";
+  document.getElementById('formMsg').textContent = "";
+  document.getElementById('formMsg').className = "form-msg";
+}
+
+async function handleSalvar(){
+  const msg = document.getElementById('formMsg');
+  const titulo = document.getElementById('fTitulo').value.trim();
+  if(!titulo){ msg.textContent = "Dê um título ao registro antes de salvar."; msg.className = "form-msg err"; return; }
+  if(!selectedDate){ return; }
+  const entry = {
+    id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
+    tipo: document.getElementById('fTipo').value,
+    titulo,
+    horario: document.getElementById('fHorario').value.trim(),
+    pessoa: document.getElementById('fPessoa').value.trim(),
+    local: document.getElementById('fLocal').value.trim(),
+    obs: document.getElementById('fObs').value.trim(),
+  };
+  const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
+  if(editingId){ currentDayRegs = currentDayRegs.map(r=> r.id===editingId ? entry : r); }
+  else { currentDayRegs = [...currentDayRegs, entry]; }
+  msg.textContent = "Salvando…"; msg.className = "form-msg";
+  const ok = await saveDayRegs(y,m,d,currentDayRegs);
+  if(ok){
+    msg.textContent = "Registro salvo."; msg.className = "form-msg ok";
+    await refreshRegistros(); await buildGrid();
+    const cell=[...document.querySelectorAll('.cell')].find(c=>parseInt(c.dataset.day)===d);
+    if(cell) cell.classList.add('selected-day');
+    resetForm();
+  } else {
+    msg.textContent = "Não foi possível salvar. Tente novamente."; msg.className = "form-msg err";
+  }
+}
+
+function renderLegend(){
+  const legend = document.getElementById('legend');
+  const rows = document.getElementById('legendRows');
+  if(selCidade){ legend.style.display="none"; return; }
+  legend.style.display = "block";
+  rows.innerHTML = CIDADES.map(c=>`<div class="lg-row"><span class="dot" style="background:${corPorCidade[c]}"></span>${c}</div>`).join("");
+}
+function renderMonthLabel(){
+  document.getElementById('monthLabel').innerHTML = `${MESES[viewMonth]} <span class="year" id="yearLabel">${viewYear}</span>`;
+}
+async function renderAll(){
+  renderMonthLabel();
+  await buildGrid();
+  renderLegend();
+  updateHint();
+}
+
+// ---------- impressão do dia ----------
+function printDayAgenda(){
+  if(!selectedDate) return;
+  const wd = weekdayNameFromDate(selectedDate);
+  const allDay = entriesFor("", "").filter(e=>e.dia===wd);
+  const feirasHtml = allDay.length ? allDay.map(e=>`
+    <div class="pa-row"><div class="pa-h">${e.horario}</div><div class="pa-b"><strong>${e.cidade} — ${e.bairro}</strong>${e.endereco?`<span>${e.endereco}</span>`:""}</div></div>
+  `).join("") : `<div class="pa-empty">Nenhuma feira oficial nesse dia.</div>`;
+
+  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  const regsHtml = currentDayRegs.length ? currentDayRegs.map(r=>`
+    <div class="pa-row"><div class="pa-h">${r.horario||"—"}</div>
+      <div class="pa-b"><strong>[${tipoLabel[r.tipo]||"Outro"}] ${r.titulo}</strong>
+      ${r.pessoa?`<span>Com: ${r.pessoa}</span>`:""}
+      ${r.local?`<span>Local: ${r.local}</span>`:""}
+      ${r.obs?`<span>${r.obs}</span>`:""}</div></div>
+  `).join("") : `<div class="pa-empty">Nenhum registro seu para esse dia.</div>`;
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="pa-page">
+      <div class="pa-title">Agenda do dia</div>
+      <div class="pa-sub">${fmtDateLabel(selectedDate)}</div>
+      <div class="pa-section"><h5>Feiras livres</h5>${feirasHtml}</div>
+      <div class="pa-section"><h5>Compromissos e registros</h5>${regsHtml}</div>
+    </div>
+  `;
+  window.print();
+}
+
+// ---------- relatório ----------
+function eachDate(start,end){
+  const arr=[]; const d=new Date(start);
+  while(d<=end){ arr.push(new Date(d)); d.setDate(d.getDate()+1); }
+  return arr;
+}
+function getRangeDates(type){
+  const today = new Date(); today.setHours(0,0,0,0);
+  let start, end;
+  if(type==='week'){
+    const dow = today.getDay();
+    start = new Date(today); start.setDate(today.getDate()-dow);
+    end = new Date(start); end.setDate(start.getDate()+6);
+  } else if(type==='month'){
+    start = new Date(viewYear, viewMonth, 1);
+    end = new Date(viewYear, viewMonth+1, 0);
+  } else if(type==='60days'){
+    start = new Date(today);
+    end = new Date(today); end.setDate(today.getDate()+60);
+  } else if(type==='augoct'){
+    start = new Date(2026,7,1);
+    end = new Date(2026,9,31);
+  }
+  return {start,end};
+}
+async function loadRegsForRange(start,end){
+  const months = new Set();
+  eachDate(start,end).forEach(d=>months.add(`${d.getFullYear()}-${d.getMonth()}`));
+  const regsByDay = {};
+  await Promise.all([...months].map(async key=>{
+    const [y,m] = key.split('-').map(Number);
+    try{
+      const res = await window.storage.list(`evt:${y}-${m}-`, false);
+      const keys = res ? res.keys : [];
+      await Promise.all(keys.map(async k=>{
+        try{
+          const r = await window.storage.get(k, false);
+          if(r && r.value){ regsByDay[k.replace('evt:','')] = JSON.parse(r.value); }
+        }catch(e){}
+      }));
+    }catch(e){}
+  }));
+  return regsByDay;
+}
+function feirasForDate(dateObj){
+  const wd = weekdayNameFromDate(dateObj);
+  let base = entriesFor(selCidade, "").filter(e=>e.dia===wd);
+  if(selFeiraIdx !== ""){
+    const allSel = entriesFor(selCidade, selDia);
+    const chosen = allSel[parseInt(selFeiraIdx)];
+    if(chosen){ base = chosen.dia===wd ? [chosen] : []; }
+  }
+  return base;
+}
+function filterNoteText(){
+  const parts = [];
+  parts.push(selCidade ? `Cidade: ${selCidade}` : "Cidade: todas");
+  parts.push(selDia ? `Dia: ${selDia}` : "Dia: todos");
+  if(selFeiraIdx !== ""){
+    const list = entriesFor(selCidade, selDia);
+    const chosen = list[parseInt(selFeiraIdx)];
+    if(chosen) parts.push(`Feira: ${chosen.bairro}`);
+  }
+  return "Filtro atual (definido na lateral) — " + parts.join(" · ");
+}
+
+let currentReport = {type:null, start:null, end:null, grouped:[]};
+
+async function buildReport(type){
+  document.querySelectorAll('.report-controls button').forEach(b=>b.classList.toggle('active', b.dataset.range===type));
+  document.getElementById('reportFilterNote').textContent = filterNoteText();
+  const body = document.getElementById('reportBody');
+  body.innerHTML = `<div class="loading-txt">Carregando período…</div>`;
+
+  const {start,end} = getRangeDates(type);
+  const dates = eachDate(start,end);
+  const regsByDay = await loadRegsForRange(start,end);
+
+  const grouped = [];
+  dates.forEach(d=>{
+    const y=d.getFullYear(), m=d.getMonth(), dd=d.getDate();
+    const feiras = feirasForDate(d);
+    const regs = regsByDay[`${y}-${m}-${dd}`] || [];
+    if(feiras.length || regs.length){ grouped.push({date:d, feiras, regs}); }
+  });
+  currentReport = {type, start, end, grouped};
+
+  if(!grouped.length){
+    body.innerHTML = `<div class="empty-note">Nenhuma feira ou registro encontrado nesse período com o filtro atual.</div>`;
+    return;
+  }
+
+  body.innerHTML = grouped.map(g=>`
+    <div class="rep-day">
+      <div class="rd-head">${fmtDateLabel(g.date)}</div>
+      ${g.feiras.map(e=>`
+        <div class="rd-item"><span class="rd-dot" style="background:${corPorCidade[e.cidade]}"></span>
+          <div class="rd-txt"><strong>${e.cidade} — ${e.bairro}</strong><span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
+        </div>`).join("")}
+      ${g.regs.map(r=>`
+        <div class="rd-item"><span class="rd-dot" style="background:#B5680B"></span>
+          <div class="rd-txt"><strong>[${({feira:"Feira",reuniao:"Reunião",outro:"Outro"})[r.tipo]||"Outro"}] ${r.titulo}</strong>
+          <span>${[r.horario, r.pessoa?("com "+r.pessoa):"", r.local].filter(Boolean).join(" · ")}</span></div>
+        </div>`).join("")}
+    </div>
+  `).join("");
+}
+
+function printReport(){
+  if(!currentReport.grouped.length){ return; }
+  const labelMap = {week:"Agenda da semana", month:"Agenda do mês", "60days":"Agenda — próximos 60 dias", augoct:"Agenda — agosto a outubro de 2026"};
+  const title = labelMap[currentReport.type] || "Agenda";
+  const sub = `${currentReport.start.getDate()}/${currentReport.start.getMonth()+1}/${currentReport.start.getFullYear()} a ${currentReport.end.getDate()}/${currentReport.end.getMonth()+1}/${currentReport.end.getFullYear()}`;
+
+  const blocks = currentReport.grouped.map(g=>`
+    <div class="pa-day-block">
+      <h6>${fmtDateLabel(g.date)}</h6>
+      ${g.feiras.map(e=>`<div class="pa-row"><div class="pa-h">${e.horario}</div><div class="pa-b"><strong>${e.cidade} — ${e.bairro}</strong>${e.endereco?`<span>${e.endereco}</span>`:""}</div></div>`).join("")}
+      ${g.regs.map(r=>`<div class="pa-row"><div class="pa-h">${r.horario||"—"}</div><div class="pa-b"><strong>[${({feira:"Feira",reuniao:"Reunião",outro:"Outro"})[r.tipo]||"Outro"}] ${r.titulo}</strong>${r.pessoa?`<span>Com: ${r.pessoa}</span>`:""}${r.local?`<span>Local: ${r.local}</span>`:""}${r.obs?`<span>${r.obs}</span>`:""}</div></div>`).join("")}
+    </div>
+  `).join("");
+
+  document.getElementById('printArea').innerHTML = `
+    <div class="pa-page">
+      <div class="pa-title">${title}</div>
+      <div class="pa-sub">${sub} — ${filterNoteText()}</div>
+      ${blocks}
+    </div>
+  `;
+  window.print();
+}
+
+// ---------- eventos ----------
+document.getElementById('selCidade').addEventListener('change', async e=>{ selCidade = e.target.value; popDia(); popFeira(); await renderAll(); });
+document.getElementById('selDia').addEventListener('change', async e=>{ selDia = e.target.value; popFeira(); await renderAll(); });
+document.getElementById('selFeira').addEventListener('change', async e=>{ selFeiraIdx = e.target.value; await renderAll(); });
+document.getElementById('btnClear').addEventListener('click', async ()=>{
+  selCidade=""; selDia=""; selFeiraIdx="";
+  document.getElementById('selCidade').value="";
+  popDia(); popFeira(); await renderAll();
+});
+document.getElementById('prevMonth').addEventListener('click', async ()=>{
+  viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;}
+  document.getElementById('selMes').value = viewMonth; document.getElementById('selAno').value = viewYear;
+  closeDayModal(); await renderAll();
+});
+document.getElementById('nextMonth').addEventListener('click', async ()=>{
+  viewMonth++; if(viewMonth>11){viewMonth=0; viewYear++;}
+  document.getElementById('selMes').value = viewMonth; document.getElementById('selAno').value = viewYear;
+  closeDayModal(); await renderAll();
+});
+document.getElementById('selMes').addEventListener('change', async e=>{ viewMonth=parseInt(e.target.value); closeDayModal(); await renderAll(); });
+document.getElementById('selAno').addEventListener('change', async e=>{ viewYear=parseInt(e.target.value); closeDayModal(); await renderAll(); });
+document.getElementById('closeDetail').addEventListener('click', closeDayModal);
+document.getElementById('dayModalOverlay').addEventListener('click', e=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
+document.getElementById('fTipo').addEventListener('change', toggleFeiraRefSelect);
+document.getElementById('btnSalvar').addEventListener('click', handleSalvar);
+document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
+document.getElementById('printDayBtn').addEventListener('click', printDayAgenda);
+
+document.getElementById('btnOpenReport').addEventListener('click', ()=>{
+  document.getElementById('reportModalOverlay').classList.add('open');
+  document.getElementById('reportFilterNote').textContent = filterNoteText();
+});
+document.getElementById('closeReport').addEventListener('click', ()=>{
+  document.getElementById('reportModalOverlay').classList.remove('open');
+});
+document.getElementById('reportModalOverlay').addEventListener('click', e=>{ if(e.target.id==='reportModalOverlay') document.getElementById('reportModalOverlay').classList.remove('open'); });
+document.querySelectorAll('.report-controls button').forEach(btn=>{
+  btn.addEventListener('click', ()=> buildReport(btn.dataset.range));
+});
+document.getElementById('printReportBtn').addEventListener('click', printReport);
+
+popMesAno();
+popCidade();
+popDia();
+popFeira();
+renderAll();
+</script>
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+    });
+  }
+</script>
+</body>
+</html>
