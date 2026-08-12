@@ -121,9 +121,16 @@
   .legend .lg{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
   .legend .dot{width:9px; height:9px; border-radius:50%; flex:none;}
 
-  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:10px; flex-wrap:wrap;}
   .section-head h3{font-family:'IBM Plex Sans', sans-serif; font-weight:700; font-size:17px; margin:0;}
-  .section-head a{font-size:12.5px; color:var(--blue); text-decoration:none; font-weight:600; display:flex; align-items:center; gap:3px; cursor:pointer;}
+  .section-head a{font-size:12.5px; color:var(--blue); text-decoration:none; font-weight:600; display:flex; align-items:center; gap:3px; cursor:pointer; white-space:nowrap;}
+  .section-actions{display:flex; align-items:center; gap:14px;}
+  .btn-novo-registro{
+    background:var(--blue); color:#fff; border:none; font-family:'IBM Plex Sans', sans-serif;
+    font-weight:700; font-size:12.5px; padding:8px 14px; border-radius:999px; cursor:pointer;
+    white-space:nowrap; box-shadow:0 3px 8px rgba(11,87,224,0.28);
+  }
+  .btn-novo-registro:hover{background:var(--navy-2);}
 
   .ag-card{
     display:flex; align-items:center; gap:12px; background:#fff; box-shadow:0 2px 10px rgba(18,36,74,0.07);
@@ -186,7 +193,7 @@
   /* ---------------- MODAL (popup do dia) ---------------- */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(18,36,74,0.55); display:none;
-    align-items:flex-end; justify-content:center; z-index:1000;
+    align-items:flex-end; justify-content:center; z-index:1100;
   }
   .modal-overlay.open{display:flex;}
   .modal-card{
@@ -312,7 +319,10 @@
 
       <div class="section-head">
         <h3 id="agendaDiaTitle">Agenda do dia</h3>
-        <a id="verAgendaCompleta">Ver agenda completa <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#0B57E0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="section-actions">
+          <button id="btnNovoRegistro" class="btn-novo-registro">+ Novo registro</button>
+          <a id="verAgendaCompleta">Ver tudo <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="#0B57E0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
       </div>
       <div id="agendaDiaList"></div>
     </section>
@@ -393,6 +403,7 @@
           <select id="fRegiaoCampanha"></select>
           <select id="fLocalCampanha"></select>
         </div>
+        <select id="fCidade" style="margin-bottom:8px;"></select>
         <input id="fTitulo" placeholder="Título / assunto">
         <div class="frow">
           <input id="fHorario" placeholder="Horário (ex: 14h30)">
@@ -823,9 +834,11 @@ function buildCalendar(){
     cell.innerHTML = html;
     if(!c.out){
       cell.addEventListener('click', ()=>{
+        const wasAlreadySelected = sameDay(dateObj, selectedDate);
         selectedDate = dateObj;
         buildCalendar();
         renderAgendaDia();
+        if(wasAlreadySelected){ openDay(dateObj); }
       });
     }
     grid.appendChild(cell);
@@ -973,6 +986,8 @@ async function openDay(dateObj){
         const e = allDay[parseInt(btn.dataset.idx)];
         document.getElementById('fTipo').value = "feira";
         toggleFeiraRefSelect();
+        popFCidade();
+        document.getElementById('fCidade').value = e.cidade;
         document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
         document.getElementById('fHorario').value = e.horario;
         document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
@@ -1002,6 +1017,7 @@ async function refreshRegistros(){
           <span class="rc-tipo">${tipoLabel[r.tipo]||"Outro"}</span>
           <div class="rc-title">${r.titulo || "(sem título)"}</div>
           <div class="rc-meta">
+            ${r.cidade ? `🏙️ ${r.cidade}<br>`:""}
             ${r.horario ? `⏰ ${r.horario}<br>`:""}
             ${r.pessoa ? `👤 ${r.pessoa}<br>`:""}
             ${r.local ? `📍 ${r.local}<br>`:""}
@@ -1023,6 +1039,8 @@ async function refreshRegistros(){
       editingId = id;
       document.getElementById('fTipo').value = r.tipo;
       toggleFeiraRefSelect();
+      popFCidade();
+      document.getElementById('fCidade').value = r.cidade || "";
       document.getElementById('fTitulo').value = r.titulo || "";
       document.getElementById('fHorario').value = r.horario || "";
       document.getElementById('fPessoa').value = r.pessoa || "";
@@ -1036,6 +1054,9 @@ async function refreshRegistros(){
   regList.querySelectorAll('.del-reg').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.closest('.reg-card').dataset.id;
+      const r = currentDayRegs.find(x=>x.id===id);
+      const confirmMsg = r ? `Excluir "${r.titulo}"? Essa ação não pode ser desfeita.` : "Excluir este registro? Essa ação não pode ser desfeita.";
+      if(!window.confirm(confirmMsg)) return;
       const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
       currentDayRegs = currentDayRegs.filter(x=>x.id!==id);
       const ok = await saveDayRegs(y,m,d,currentDayRegs);
@@ -1056,6 +1077,7 @@ function toggleFeiraRefSelect(){
     ref.onchange = ()=>{
       if(ref.value===""){return;}
       const e = allDay[parseInt(ref.value)];
+      if(document.getElementById('fCidade').value !== undefined){ document.getElementById('fCidade').value = e.cidade; }
       document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
       document.getElementById('fHorario').value = e.horario;
       document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
@@ -1090,10 +1112,16 @@ function popLocalCampanha(regiao){
     document.getElementById('fObs').value = p[3] || "";
   };
 }
+function popFCidade(){
+  const sel = document.getElementById('fCidade');
+  sel.innerHTML = '<option value="">Cidade (opcional)</option>' + CIDADES.map(c=>`<option value="${c}">${c}</option>`).join("");
+}
 function resetForm(){
   editingId = null;
   document.getElementById('fTipo').value = "feira";
   toggleFeiraRefSelect();
+  popFCidade();
+  document.getElementById('fCidade').value = "";
   document.getElementById('fTitulo').value = "";
   document.getElementById('fHorario').value = "";
   document.getElementById('fPessoa').value = "";
@@ -1113,6 +1141,7 @@ async function handleSalvar(){
     const entry = {
       id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
       tipo: document.getElementById('fTipo').value,
+      cidade: document.getElementById('fCidade').value,
       titulo,
       horario: document.getElementById('fHorario').value.trim(),
       pessoa: document.getElementById('fPessoa').value.trim(),
@@ -1228,6 +1257,7 @@ document.getElementById('selFeira').addEventListener('change', e=>{ selFeiraIdx=
 document.getElementById('prevMonth').addEventListener('click', ()=>{ viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;} buildCalendar(); });
 document.getElementById('nextMonth').addEventListener('click', ()=>{ viewMonth++; if(viewMonth>11){viewMonth=0; viewYear++;} buildCalendar(); });
 document.getElementById('verAgendaCompleta').addEventListener('click', ()=> switchView('agenda'));
+document.getElementById('btnNovoRegistro').addEventListener('click', ()=> openDay(selectedDate));
 document.getElementById('btnGoReport').addEventListener('click', ()=> switchView('relatorios'));
 document.getElementById('closeDetail').addEventListener('click', closeDayModal);
 document.getElementById('dayModalOverlay').addEventListener('click', e=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
