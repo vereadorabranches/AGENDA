@@ -61,7 +61,6 @@
     .form-row{grid-template-columns:1fr;}
   }
 
-
   /* ---------------- SIDEBAR ---------------- */
   aside{background:var(--blue-navy); color:var(--white); padding:26px 22px 30px 22px; border-right:1px solid var(--line);}
   aside .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:#9FB6EE; margin-bottom:6px;}
@@ -498,32 +497,36 @@ let editingId = null;
 // ---------- storage helpers ----------
 function dayKey(y,m,d){ return `evt:${y}-${m}-${d}`; }
 
+function lsAvailable(){
+  try{ const t='__lstest__'; localStorage.setItem(t,'1'); localStorage.removeItem(t); return true; }
+  catch(e){ return false; }
+}
+
 async function loadMonthRegCounts(){
   monthRegCounts = {};
-  try{
-    const prefix = `evt:${viewYear}-${viewMonth}-`;
-    const res = await window.storage.list(prefix, false);
-    const keys = res ? res.keys : [];
-    await Promise.all(keys.map(async k=>{
+  if(!lsAvailable()) return;
+  const prefix = `evt:${viewYear}-${viewMonth}-`;
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.indexOf(prefix)===0){
       try{
-        const r = await window.storage.get(k, false);
-        if(r && r.value){
-          const arr = JSON.parse(r.value);
-          const d = k.split('-').pop();
-          monthRegCounts[d] = Array.isArray(arr) ? arr.length : 0;
-        }
+        const arr = JSON.parse(localStorage.getItem(k));
+        const d = k.split('-').pop();
+        monthRegCounts[d] = Array.isArray(arr) ? arr.length : 0;
       }catch(e){}
-    }));
-  }catch(e){ monthRegCounts = {}; }
+    }
+  }
 }
 async function loadDayRegs(y,m,d){
+  if(!lsAvailable()) return [];
   try{
-    const r = await window.storage.get(dayKey(y,m,d), false);
-    return r && r.value ? JSON.parse(r.value) : [];
+    const v = localStorage.getItem(dayKey(y,m,d));
+    return v ? JSON.parse(v) : [];
   }catch(e){ return []; }
 }
 async function saveDayRegs(y,m,d,list){
-  try{ const res = await window.storage.set(dayKey(y,m,d), JSON.stringify(list), false); return !!res; }
+  if(!lsAvailable()) return false;
+  try{ localStorage.setItem(dayKey(y,m,d), JSON.stringify(list)); return true; }
   catch(e){ return false; }
 }
 
@@ -891,22 +894,22 @@ function getRangeDates(type){
   return {start,end};
 }
 async function loadRegsForRange(start,end){
+  const regsByDay = {};
+  if(!lsAvailable()) return regsByDay;
   const months = new Set();
   eachDate(start,end).forEach(d=>months.add(`${d.getFullYear()}-${d.getMonth()}`));
-  const regsByDay = {};
-  await Promise.all([...months].map(async key=>{
-    const [y,m] = key.split('-').map(Number);
-    try{
-      const res = await window.storage.list(`evt:${y}-${m}-`, false);
-      const keys = res ? res.keys : [];
-      await Promise.all(keys.map(async k=>{
+  months.forEach(key=>{
+    const prefix = `evt:${key}-`;
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf(prefix)===0){
         try{
-          const r = await window.storage.get(k, false);
-          if(r && r.value){ regsByDay[k.replace('evt:','')] = JSON.parse(r.value); }
+          const v = localStorage.getItem(k);
+          if(v) regsByDay[k.replace('evt:','')] = JSON.parse(v);
         }catch(e){}
-      }));
-    }catch(e){}
-  }));
+      }
+    }
+  });
   return regsByDay;
 }
 function feirasForDate(dateObj){
