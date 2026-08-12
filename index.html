@@ -147,6 +147,8 @@
   .ag-meta svg{flex:none;}
   .ag-tag{flex:none; font-family:'IBM Plex Sans', sans-serif; font-size:11px; font-weight:700; padding:5px 10px; border-radius:8px;}
   .ag-chev{flex:none; color:var(--ink-soft); font-size:16px;}
+  .ag-gcal{flex:none; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:7px;}
+  .ag-gcal:hover{background:var(--blue-soft); color:var(--blue);}
   .ag-card.reg{box-shadow:0 2px 10px rgba(181,104,11,0.12);}
   .empty-note{font-size:13px; color:var(--ink-soft); padding:10px 2px;}
 
@@ -213,6 +215,7 @@
   .feira-item .fi-main strong{color:var(--navy); font-family:'IBM Plex Sans', sans-serif;}
   .feira-item .fi-main span{display:block; color:var(--ink-soft); font-size:11.3px; margin-top:2px;}
   .feira-item button{flex:none; font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase; background:var(--blue-soft); border:1px solid var(--line); color:var(--navy); padding:5px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;}
+  .fi-actions{display:flex; gap:6px; flex:none;}
 
   .reg-card{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:8px; padding:10px 12px; margin-bottom:10px; background:#FFFBF4;}
   .reg-card .rc-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
@@ -221,6 +224,7 @@
   .reg-card .rc-meta{font-size:11.8px; color:var(--ink-soft); margin-top:4px; line-height:1.5;}
   .reg-card .rc-actions{display:flex; gap:6px; flex:none;}
   .reg-card .rc-actions button{font-family:'IBM Plex Mono', monospace; font-size:10px; border:1px solid var(--line); background:#fff; padding:4px 7px; border-radius:6px; cursor:pointer; color:var(--ink-soft);}
+  .reg-card .rc-actions .gcal-link{font-family:'IBM Plex Mono', monospace; font-size:10px; border:1px solid var(--line); background:#fff; padding:4px 7px; border-radius:6px; color:var(--blue); text-decoration:none; white-space:nowrap;}
 
   .form-registro{border-top:1px solid var(--line); padding-top:16px; margin-top:6px;}
   .frow{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;}
@@ -347,6 +351,7 @@
       </div>
       <div class="empty-note-sm" id="reportFilterNote" style="margin-bottom:10px;"></div>
       <div id="reportBody"><div class="loading-txt">Selecione um período acima.</div></div>
+      <button class="btn-print" id="btnExportICS" style="background:var(--blue); margin-top:10px;">Exportar para Google Agenda (.ics)</button>
       <button class="btn-print" id="printReportBtn">Imprimir relatório</button>
     </section>
 
@@ -732,6 +737,78 @@ function fmtDateLabel(d){ return `${weekdayNameFromDate(d)}, ${d.getDate()} de $
 function sameDay(a,b){ return a.toDateString()===b.toDateString(); }
 function eachDate(start,end){ const arr=[]; const d=new Date(start); while(d<=end){ arr.push(new Date(d)); d.setDate(d.getDate()+1); } return arr; }
 
+// ---------- integração com Google Agenda ----------
+function pad2(n){ return String(n).padStart(2,'0'); }
+function parseHorario(s){
+  if(!s) return null;
+  const matches = [...String(s).matchAll(/(\d{1,2})h(\d{2})?/g)];
+  if(!matches.length) return null;
+  const startH = parseInt(matches[0][1]), startM = matches[0][2]?parseInt(matches[0][2]):0;
+  let endH = startH+1, endM = startM;
+  if(matches.length>=2){
+    endH = parseInt(matches[1][1]);
+    endM = matches[1][2]?parseInt(matches[1][2]):0;
+  }
+  return {startH,startM,endH,endM};
+}
+function googleCalendarLink(title, dateObj, horario, location, details){
+  const parsed = parseHorario(horario);
+  const y=dateObj.getFullYear(), mo=dateObj.getMonth(), d=dateObj.getDate();
+  let datesParam;
+  if(parsed){
+    const s = `${y}${pad2(mo+1)}${pad2(d)}T${pad2(parsed.startH)}${pad2(parsed.startM)}00`;
+    const e = `${y}${pad2(mo+1)}${pad2(d)}T${pad2(parsed.endH)}${pad2(parsed.endM)}00`;
+    datesParam = `${s}/${e}`;
+  } else {
+    const nd = new Date(y,mo,d+1);
+    const fdA = `${y}${pad2(mo+1)}${pad2(d)}`;
+    const fdB = `${nd.getFullYear()}${pad2(nd.getMonth()+1)}${pad2(nd.getDate())}`;
+    datesParam = `${fdA}/${fdB}`;
+  }
+  const params = new URLSearchParams({
+    action:'TEMPLATE', text:title, dates:datesParam,
+    details: details||'', location: location||'', ctz:'America/Sao_Paulo'
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+function icsEscape(s){ return String(s||"").replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
+function buildICS(events){
+  let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Feiras Vale do Paraiba//PT-BR\r\nCALSCALE:GREGORIAN\r\n";
+  events.forEach(e=>{
+    const parsed = parseHorario(e.horario);
+    const y=e.dateObj.getFullYear(), mo=e.dateObj.getMonth(), d=e.dateObj.getDate();
+    let dtStartLine, dtEndLine;
+    if(parsed){
+      const s = `${y}${pad2(mo+1)}${pad2(d)}T${pad2(parsed.startH)}${pad2(parsed.startM)}00`;
+      const en = `${y}${pad2(mo+1)}${pad2(d)}T${pad2(parsed.endH)}${pad2(parsed.endM)}00`;
+      dtStartLine = `DTSTART;TZID=America/Sao_Paulo:${s}`;
+      dtEndLine = `DTEND;TZID=America/Sao_Paulo:${en}`;
+    } else {
+      const nd = new Date(y,mo,d+1);
+      dtStartLine = `DTSTART;VALUE=DATE:${y}${pad2(mo+1)}${pad2(d)}`;
+      dtEndLine = `DTEND;VALUE=DATE:${nd.getFullYear()}${pad2(nd.getMonth()+1)}${pad2(nd.getDate())}`;
+    }
+    ics += "BEGIN:VEVENT\r\n";
+    ics += `UID:${Date.now()}${Math.random().toString(36).slice(2)}@feirasvp\r\n`;
+    ics += dtStartLine + "\r\n" + dtEndLine + "\r\n";
+    ics += `SUMMARY:${icsEscape(e.title)}\r\n`;
+    if(e.location) ics += `LOCATION:${icsEscape(e.location)}\r\n`;
+    if(e.details) ics += `DESCRIPTION:${icsEscape(e.details)}\r\n`;
+    ics += "END:VEVENT\r\n";
+  });
+  ics += "END:VCALENDAR\r\n";
+  return ics;
+}
+function downloadICS(filename, events){
+  if(!events.length) return;
+  const blob = new Blob([buildICS(events)], {type:"text/calendar;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
 function entriesFor(cidade, dia){
   let list = [];
   const cidades = cidade ? [cidade] : CIDADES;
@@ -838,7 +915,12 @@ function buildCalendar(){
         selectedDate = dateObj;
         buildCalendar();
         renderAgendaDia();
-        if(wasAlreadySelected){ openDay(dateObj); }
+        if(wasAlreadySelected){
+          openDay(dateObj);
+        } else {
+          const anchor = document.getElementById('agendaDiaTitle');
+          if(anchor){ anchor.scrollIntoView({behavior:'smooth', block:'start'}); }
+        }
       });
     }
     grid.appendChild(cell);
@@ -882,8 +964,10 @@ function renderAgCard(dateObj, feira, reg){
   const mm = MESES_ABR[dateObj.getMonth()];
   const ICO_CLOCK = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
   const ICO_PIN = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9.5" r="2.3" stroke="currentColor" stroke-width="1.8"/></svg>`;
+  const ICO_GCAL = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.4" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 9.5h17M8 3v3.4M16 3v3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 13v5M9.5 15.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
   if(feira){
     const hex = corHex[feira.cidade];
+    const gcal = googleCalendarLink(`Feira — ${feira.bairro} (${feira.cidade})`, dateObj, feira.horario, `${feira.bairro}${feira.endereco?", "+feira.endereco:""} — ${feira.cidade}`, `Feira livre em ${feira.cidade}.`);
     return `
       <div class="ag-card">
         <div class="ag-date" style="background:${hex}18; color:${hex};"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -892,11 +976,13 @@ function renderAgCard(dateObj, feira, reg){
           <div class="ag-meta">${ICO_CLOCK} ${feira.horario}</div>
           <div class="ag-meta">${ICO_PIN} ${feira.bairro}</div>
         </div>
+        <a class="ag-gcal" href="${gcal}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Adicionar ao Google Agenda">${ICO_GCAL}</a>
         <div class="ag-tag" style="background:${hex}18; color:${hex};">${ABREV[feira.cidade]}</div>
         <span class="ag-chev">›</span>
       </div>`;
   }
   const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
+  const gcalReg = googleCalendarLink(reg.titulo, dateObj, reg.horario, reg.local||'', [reg.pessoa?`Com: ${reg.pessoa}`:'', reg.obs||''].filter(Boolean).join(' — '));
   return `
     <div class="ag-card reg">
       <div class="ag-date" style="background:#FFF3E2; color:#B5680B;"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -905,6 +991,7 @@ function renderAgCard(dateObj, feira, reg){
         <div class="ag-meta">${[reg.horario, reg.pessoa?("com "+reg.pessoa):""].filter(Boolean).join(" · ") || tipoLabel[reg.tipo]}</div>
         ${reg.local?`<div class="ag-meta">${ICO_PIN} ${reg.local}</div>`:""}
       </div>
+      <a class="ag-gcal" href="${gcalReg}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Adicionar ao Google Agenda">${ICO_GCAL}</a>
       <div class="ag-tag" style="background:#FFF3E2; color:#B5680B;">${tipoLabel[reg.tipo]||"Outro"}</div>
       <span class="ag-chev">›</span>
     </div>`;
@@ -978,7 +1065,10 @@ async function openDay(dateObj){
     feirasList.innerHTML = allDay.map((e,i)=>`
       <div class="feira-item">
         <div class="fi-main"><strong>${e.cidade}</strong> — ${e.bairro}<span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
-        <button data-idx="${i}" class="use-feira">Usar</button>
+        <div class="fi-actions">
+          <a href="${googleCalendarLink(`Feira — ${e.bairro} (${e.cidade})`, dateObj, e.horario, `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`, `Feira livre em ${e.cidade}.`)}" target="_blank" rel="noopener" class="use-feira" style="text-decoration:none; display:inline-block;">Agenda</a>
+          <button data-idx="${i}" class="use-feira">Usar</button>
+        </div>
       </div>
     `).join("");
     feirasList.querySelectorAll('.use-feira').forEach(btn=>{
@@ -1025,6 +1115,7 @@ async function refreshRegistros(){
           </div>
         </div>
         <div class="rc-actions">
+          <a href="${googleCalendarLink(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '))}" target="_blank" rel="noopener" class="gcal-link">Agenda</a>
           <button class="edit-reg">Editar</button>
           <button class="del-reg">Excluir</button>
         </div>
@@ -1266,6 +1357,31 @@ document.getElementById('btnSalvar').addEventListener('click', handleSalvar);
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 document.getElementById('printDayBtn').addEventListener('click', printDayAgenda);
 document.getElementById('printReportBtn').addEventListener('click', printReport);
+document.getElementById('btnExportICS').addEventListener('click', ()=>{
+  if(!currentReport.grouped.length){ alert("Escolha um período do relatório primeiro."); return; }
+  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
+  const events = [];
+  currentReport.grouped.forEach(g=>{
+    g.feiras.forEach(e=>{
+      events.push({
+        title: `Feira — ${e.bairro} (${e.cidade})`,
+        dateObj: g.date, horario: e.horario,
+        location: `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`,
+        details: `Feira livre em ${e.cidade}.`
+      });
+    });
+    g.regs.forEach(r=>{
+      events.push({
+        title: `[${tipoLabel[r.tipo]||"Outro"}] ${r.titulo}`,
+        dateObj: g.date, horario: r.horario,
+        location: r.local||'',
+        details: [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — ')
+      });
+    });
+  });
+  const labelMap = {week:"semana", month:"mes", "60days":"60dias", augoct:"ago-out-2026"};
+  downloadICS(`agenda-feiras-${labelMap[currentReport.type]||"periodo"}.ics`, events);
+});
 document.querySelectorAll('.rep-presets button').forEach(btn=> btn.addEventListener('click', ()=>buildReport(btn.dataset.range)));
 document.querySelectorAll('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=>switchView(btn.dataset.view)));
 
