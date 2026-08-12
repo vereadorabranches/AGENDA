@@ -18,6 +18,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
+    --app-max-width:480px;
     --white:#FFFFFF; --page:#EEF2F8; --line:#E4EAF3; --line-soft:#EEF2F8;
     --ink:#161B29; --ink-soft:#6B7386; --navy:#04307C; --navy-2:#0B3F92;
     --blue:#0B57E0; --blue-mid:#0B4DB8; --blue-soft:#EAF1FF; --blue-pale:#F3F7FF;
@@ -29,7 +30,7 @@
   body{margin:0; background:var(--page); color:var(--ink); font-family:'IBM Plex Sans', sans-serif;}
 
   .shell{
-    max-width:480px; margin:0 auto; min-height:100vh; background:var(--page);
+    max-width:var(--app-max-width); margin:0 auto; min-height:100vh; background:var(--page);
     display:flex; flex-direction:column; position:relative;
     box-shadow:0 0 40px rgba(18,36,74,0.12);
   }
@@ -46,7 +47,13 @@
   }
   .header-text h1{font-family:'IBM Plex Sans', sans-serif; font-weight:800; font-size:22px; line-height:1.15; margin:0; letter-spacing:-0.01em;}
   .header-text p{margin:4px 0 0 0; font-size:13px; color:#AFC2ED;}
-  .header-deco{position:absolute; right:-10px; top:8px; opacity:.9; z-index:1;}
+  .header-deco{
+    position:absolute; right:20px; top:50%; transform:translateY(-50%);
+    width:125px; z-index:1; pointer-events:none;
+  }
+  @media (max-width:430px){ .header-deco{width:108px; right:16px;} }
+  @media (max-width:389px){ .header-deco{width:92px; right:14px;} }
+  @media (max-width:359px){ .header-deco{width:78px; right:12px;} }
 
   /* ---------------- FILTER TOOLBAR ---------------- */
   .toolbar{
@@ -77,7 +84,7 @@
   .pill-report svg{flex:none;}
 
   /* ---------------- MAIN / CARDS ---------------- */
-  main{flex:1; padding:16px 14px 90px 14px;}
+  main{flex:1; padding:16px 14px calc(76px + env(safe-area-inset-bottom)) 14px;}
   .card{background:var(--white); border-radius:20px; box-shadow:0 4px 16px rgba(18,36,74,0.06); padding:16px; margin-bottom:14px;}
 
   .cal-top{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:12px;}
@@ -158,9 +165,13 @@
 
   /* ---------------- BOTTOM TABS ---------------- */
   .bottom-tabs{
-    position:sticky; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--line);
-    display:grid; grid-template-columns:repeat(4,1fr); padding:8px 4px calc(8px + env(safe-area-inset-bottom)) 4px;
-    max-width:480px; margin:0 auto; box-shadow:0 -6px 18px rgba(18,36,74,0.06);
+    position:fixed; left:50%; bottom:0; transform:translateX(-50%);
+    width:100%; max-width:var(--app-max-width);
+    display:grid; grid-template-columns:repeat(4,1fr);
+    padding:10px 4px calc(10px + env(safe-area-inset-bottom)) 4px;
+    background:#fff; border-top:1px solid rgba(0,0,0,.08);
+    box-shadow:0 -6px 18px rgba(18,36,74,0.06);
+    z-index:1000;
   }
   .tab-btn{
     background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -179,7 +190,7 @@
   }
   .modal-overlay.open{display:flex;}
   .modal-card{
-    background:#fff; width:100%; max-width:480px; max-height:88vh; border-radius:18px 18px 0 0;
+    background:#fff; width:100%; max-width:var(--app-max-width); max-height:88vh; border-radius:18px 18px 0 0;
     display:flex; flex-direction:column; overflow:hidden;
   }
   .modal-card .mhead{background:var(--navy); color:#fff; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
@@ -251,11 +262,14 @@
         <p>Vale do Paraíba</p>
       </div>
     </div>
-    <svg class="header-deco" width="150" height="110" viewBox="0 0 150 110" fill="none">
-      <path d="M20 70 Q10 50 25 35 Q30 15 55 15 Q70 5 90 15 Q115 10 125 30 Q145 35 140 55 Q150 70 130 80 Q125 100 100 95 Q80 108 60 95 Q35 100 25 85 Q10 85 20 70Z" fill="#0B57E0" opacity="0.35"/>
-      <circle cx="82" cy="48" r="26" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="1.4"/>
-      <path d="M82 34c-8 0-13 7-13 13 0 9 13 22 13 22s13-13 13-22c0-6-5-13-13-13Z" fill="#fff"/>
-      <circle cx="82" cy="47" r="5" fill="#12244A"/>
+    <svg class="header-deco" width="150" height="130" viewBox="0 0 150 130" fill="none">
+      <path d="M18 78 Q6 58 22 40 Q26 18 52 16 Q68 4 92 14 Q118 8 130 28 Q148 32 143 54 Q152 72 132 84 Q128 106 101 100 Q80 114 58 100 Q34 106 23 90 Q8 92 18 78Z" fill="#5C8DF2" opacity="0.24"/>
+      <circle cx="48" cy="52" r="2.6" fill="#fff" opacity="0.5"/>
+      <circle cx="100" cy="66" r="2.2" fill="#fff" opacity="0.4"/>
+      <circle cx="70" cy="88" r="2.2" fill="#fff" opacity="0.4"/>
+      <circle cx="82" cy="52" r="27" fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="1.3"/>
+      <path d="M82 37c-9 0-14.5 7.6-14.5 14.5 0 10 14.5 24 14.5 24s14.5-14 14.5-24C96.5 44.6 91 37 82 37Z" fill="#fff"/>
+      <circle cx="82" cy="51.5" r="5.4" fill="#04307C"/>
     </svg>
   </header>
 
@@ -369,10 +383,15 @@
         <div class="frow">
           <select id="fTipo">
             <option value="feira">Ir à feira</option>
+            <option value="campanha">Ponto de campanha</option>
             <option value="reuniao">Reunião</option>
             <option value="outro">Outro</option>
           </select>
           <select id="fFeiraRef" style="display:none;"></select>
+        </div>
+        <div class="frow" id="campanhaRow" style="display:none;">
+          <select id="fRegiaoCampanha"></select>
+          <select id="fLocalCampanha"></select>
         </div>
         <input id="fTitulo" placeholder="Título / assunto">
         <div class="frow">
@@ -520,18 +539,114 @@ const feirasPorCidade = {
  ["Domingo","6h às 13h","Rua José de Campos — Jardim Cerejeiras",""],
  ["Domingo","6h às 13h","Praça Soldado Constitucionalista — Bairro do Tanque",""],
 ],
+"Litoral Norte": [],
 };
 
 const CIDADES = Object.keys(feirasPorCidade);
 const corHex = {
   "São José dos Campos":"#2F6FED", "Jacareí":"#8B5CF6", "Taubaté":"#22C55E",
   "Caçapava":"#F97316", "Aparecida":"#14B8A6", "Guaratinguetá":"#EC4899",
-  "Campos do Jordão":"#0F766E", "Atibaia":"#EAB308",
+  "Campos do Jordão":"#0F766E", "Atibaia":"#EAB308", "Litoral Norte":"#38BDF8",
 };
 const ABREV = {
   "São José dos Campos":"SJC", "Jacareí":"JAC", "Taubaté":"TAU", "Caçapava":"CAC",
   "Aparecida":"APA", "Campos do Jordão":"CJO", "Guaratinguetá":"GTA", "Atibaia":"ATB",
+  "Litoral Norte":"LNO",
 };
+
+// ---------- pontos de campanha (bandeiraço) por região/cidade ----------
+const pontosCampanha = {
+"Central": [
+ ["Ponte Estaiada — rotatória","Ponte Estaiada","7h–9h / 17h–19h","Grande fluxo de veículos"],
+ ["Av. 9 de Julho × Rua Prudente de Moraes","Vila Adyana / Centro","7h–9h / 17h–19h","Bom para bandeiras"],
+ ["Av. Dr. Nelson D'Ávila × Rua Francisco Paes","Centro","7h–9h / 17h–19h","Fluxo intenso"],
+ ["Av. Dr. Nelson D'Ávila × Rua Turquia","Centro","7h–9h / 17h–19h","Corredor central"],
+ ["Av. Dr. João Guilhermino × Rua Humaitá","Centro","7h–9h / 16h30–19h","Veículos e pedestres"],
+ ["Av. Dr. João Guilhermino × Rua Vilaça","Centro","7h–9h / 17h–19h","Boa exposição"],
+ ["Av. Dr. João Guilhermino × Rua Francisco Berling","Centro","7h–9h / 17h–19h","Fluxo de entrada e saída"],
+ ["Av. Heitor Villa-Lobos × Av. Francisco José Longo","Vila Adyana","7h–9h / 17h–19h","Cruzamento estratégico"],
+ ["Av. Heitor Villa-Lobos × Av. Nove de Julho","Vila Adyana","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. Adhemar de Barros × Rua Major Vaz","Vila Adyana","7h–9h / 17h–19h","Bom fluxo urbano"],
+ ["Praça Afonso Pena × Rua Humaitá / Rubião Júnior","Centro","11h–14h / 16h–18h","Muito bom para contato com pedestres"],
+ ["Rua Sete de Setembro × Rua Sebastião Humel","Mercadão","8h–13h","Pedestres e comércio"],
+ ["Av. Nadir Toledo de Mira × Rua Tupã","Igreja São Judas / Jardim Paulista","7h–9h / 17h–19h","Fluxo local importante"],
+],
+"Sul": [
+ ["Av. Andrômeda × Rua Mário Valério de Camargo × Rua Perseu","Satélite","7h–9h / 17h–19h","Prioridade alta"],
+ ["Rua Iguape × Av. Cidade Jardim","Região Sul","7h–9h / 17h–19h","Boa circulação"],
+ ["Av. Cidade Jardim × Praça das Bandeiras","Região Sul","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. Cidade Jardim × Av. Cassiopeia","Região Sul","7h–9h / 17h–19h","Fluxo regional"],
+ ["Av. Andrômeda × Av. Cassiopeia","Satélite","7h–9h / 17h–19h","Cruzamento amplo"],
+ ["Av. Andrômeda × Rua Altair","Vale Sul","11h–14h / 17h–19h","Prioridade alta – Vale Sul"],
+ ["Av. Andrômeda × Rua São João Del Rei","Região Sul","7h–9h / 17h–19h","Grande corredor"],
+ ["Av. Dr. Sebastião Henrique × Av. Andrômeda","Vale Sul","7h–9h / 17h–19h","Fluxo muito alto"],
+ ["Av. Sebastião Henrique da Cunha Pontes — região do Posto Sete Estrelas","Posto Sete Estrelas","7h–9h / 17h–19h","Corredor de veículos"],
+ ["Rua Lupércio Antônio dos Santos × Rua Paraibuna","Região Sul","7h–9h / 17h–19h","Fluxo urbano"],
+ ["Av. Marechal Henrique Teixeira Lott × Rua Paraibuna","Região Sul","7h–9h / 17h–19h","Boa exposição"],
+ ["Rua Penedo × Rua José Cobra","Bosque dos Eucaliptos / região","7h–9h / 17h–19h","Movimento de bairro"],
+ ["Av. João Batista de Souza Soares × Av. Benedito Bento","Região Sul","7h–9h / 17h–19h","Grande corredor"],
+ ["Av. João Batista de Souza Soares × Rua José de Campos","Região Sul","7h–9h / 17h–19h","Bom volume"],
+ ["Av. Benedito Bento × Rua Gisele Martins","Região Sul","7h–9h / 17h–19h","Ação regional"],
+ ["Rua José de Campos × Rua Gisele Martins","Região Sul","7h–9h / 17h–19h","Movimento local"],
+],
+"Leste": [
+ ["Rotatória Pedro Friggi × Spani","Frente ao Spani","7h–9h / 16h30–19h","Prioridade alta"],
+ ["Rotatória Nagumo × Pedro Friggi","Novo Horizonte","7h–9h / 17h–19h","Comércio e moradores"],
+ ["Av. Pedro Friggi × Rua das Peônias","Região Leste","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. Pedro Friggi × Av. Tancredo Neves","Região Leste","7h–9h / 17h–19h","Grande fluxo"],
+ ["Av. Pedro Friggi — região da Praça Aida Monteiro","Praça Aida Monteiro","16h–19h","Contato com moradores"],
+ ["Av. Tancredo Neves — principais acessos","Região Leste","7h–9h / 17h–19h","Corredor regional"],
+ ["Av. Presidente JK × Rua Abaeté","Hospital da Vila","7h–9h / 17h–19h","Bom fluxo"],
+ ["Av. Presidente JK × Conjunto Integração","Conjunto Integração","7h–9h / 17h–19h","Região populosa"],
+ ["Av. Presidente JK — Rotatória da Havan","Havan","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. Presidente JK × Via Cambuí","Via Cambuí","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. Presidente JK × Av. Tancredo Neves","Região Leste","7h–9h / 17h–19h","Grande circulação"],
+ ["Av. Presidente JK — acesso ao Jardim Santa Inês","Jardim Santa Inês","7h–9h / 17h–19h","Entrada e saída do bairro"],
+ ["Av. Tancredo Neves, em frente ao 2220","Drogaria São Paulo","7h–9h / 17h–19h","Importante corredor"],
+],
+"Sudeste": [
+ ["Rotatória Rodolfo Castelli × UPA Putim","UPA Putim","7h–9h / 17h–19h","Prioridade regional"],
+ ["Rotatória Osberre/Oswaldo Bassi × Estrada do Aeroporto","Putim / São Judas","7h–9h / 17h–19h","Confirmar nome oficial da via"],
+],
+"Oeste": [
+ ["Av. Dr. Eduardo Cury × Rua Ana Maria Nando Silva","Jardim Aquarius","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. São João × Av. Rio Branco","Região Oeste","7h–9h / 17h–19h","Prioridade alta"],
+ ["Av. São João × Rua Miguel Naked","Região Oeste","7h–9h / 17h–19h","Fluxo importante"],
+ ["Av. São João × Av. Barão do Rio Branco","Região Oeste","7h–9h / 17h–19h","Boa visibilidade"],
+ ["Av. Lineu de Moura — rotatória Jardim do Golfe","Jardim do Golfe","7h–9h / 17h–19h","Entrada e saída regional"],
+ ["Av. Lineu de Moura — rotatória Thermas","Thermas do Vale","7h–9h / 17h–19h","Bom corredor"],
+ ["Av. Jorge Zarur × Av. João Batista de Souza Soares","Anel Viário","7h–9h / 17h–19h","Prioridade muito alta"],
+ ["Av. Jorge Zarur × Rua Francisco Ricci","Região Oeste","7h–9h / 17h–19h","Fluxo muito forte"],
+ ["Av. Dr. Eduardo Cury — acessos ao Jardim Aquarius","Jardim Aquarius","7h–9h / 17h–19h","Bom para rotatividade"],
+ ["Av. Cassiano Ricardo × Av. Alfredo Ignácio Nogueira Penido","Região Oeste","7h–9h / 17h–19h","Grande corredor"],
+ ["Av. Cassiano Ricardo — acesso ao Colinas Shopping","Colinas Shopping","11h–14h / 17h–20h","Veículos e público do shopping"],
+],
+"Norte": [
+ ["Av. Rui Barbosa × Rua Carlos Belmiro dos Santos","Santana / região","7h–9h / 17h–19h","Corredor regional"],
+ ["Av. Rui Barbosa × Av. Olivo Gomes","Santana","7h–9h / 17h–19h","Prioridade alta – Norte"],
+ ["Av. Audemo Veneziani × Av. Pico das Agulhas Negras","Região Norte","7h–9h / 17h–19h","Movimento regional"],
+ ["Av. Senador Teotônio Vilela × Av. Sebastião Gualberto","Região Norte / Centro","7h–9h / 17h–19h","Prioridade alta; observar obras e trânsito"],
+ ["Av. João Marson × Av. Senador Teotônio Vilela","Região Norte","7h–9h / 17h–19h","Entrada e saída"],
+ ["Av. Olivo Gomes — acesso ao Parque da Cidade","Parque da Cidade","8h–11h (fim de semana)","Melhor para abordagem de pedestres"],
+ ["Av. Princesa Isabel — região de Santana","Santana","7h–9h / 17h–19h","Comércio e moradores"],
+],
+"Jacareí": [
+ ["Praça Raul Chaves","Praça Raul Chaves","8h–11h / 16h–19h","Praça central; bom fluxo de pedestres"],
+ ["Praça Conde Frontin","Praça Conde Frontin","8h–11h / 16h–19h","Centro; boa circulação de pedestres"],
+ ["Rotatória Jardim do Vale","Jardim do Vale","7h–9h / 17h–19h","Rotatória com fluxo de entrada e saída"],
+ ["Av. Siqueira Campos × Rua José Benedito Soares","Delegacia","7h–9h / 17h–19h","Cruzamento de grande circulação"],
+ ["Av. Siqueira Campos × Rua General Carneiro","Esquina JB","7h–9h / 17h–19h","Boa visibilidade"],
+ ["Calçadão — Rua Sargento Acrísio Santana / Rua do Correio","Calçadão / Correio","9h–13h / 16h–18h","Prioridade para contato com pedestres"],
+ ["Praça do Rosário","Centro","9h–13h / 16h–18h","Praça central; contato direto com pedestres"],
+ ["Mercado Municipal","Mercado Municipal de Jacareí","8h–13h","Comércio e grande fluxo de pedestres"],
+ ["Ponte do São João — cruzamentos","Ponte do São João","7h–9h / 17h–19h","Corredor de passagem; avaliar ponto seguro"],
+ ["Cruzamento Fórum × MAV","Fórum / MAV","7h–9h / 17h–19h","Confirmar denominação exata do cruzamento"],
+ ["Av. Pereira de Campos — rua da feira","Jardim Dindinha","7h–10h / 16h–19h","Movimento local e dias de feira"],
+ ["Rotatória Santa Helena","Esquina do Posto 7 Estrelas","7h–9h / 17h–19h","Boa circulação de veículos"],
+ ["Av. Henrique Eroles × Rua Padre Jucá","Região central / Jacareí","7h–9h / 17h–19h","Cruzamento com fluxo urbano"],
+],
+};
+const REGIOES_CAMPANHA = Object.keys(pontosCampanha);
 
 const hoje = new Date(); hoje.setHours(0,0,0,0);
 let viewMonth = hoje.getMonth();
@@ -542,6 +657,11 @@ let selFeiraIdx = "";
 let selectedDate = new Date(hoje);
 let currentDayRegs = [];
 let editingId = null;
+let storageWarned = false;
+
+// Fallback em memória: usado só se o navegador bloquear localStorage (ex.: modo privado).
+// Os dados continuam disponíveis durante a sessão, mas não persistem após fechar a aba.
+const memStore = {};
 
 function dayKey(y,m,d){ return `evt:${y}-${m}-${d}`; }
 function lsAvailable(){
@@ -549,33 +669,49 @@ function lsAvailable(){
   catch(e){ return false; }
 }
 async function loadDayRegs(y,m,d){
-  if(!lsAvailable()) return [];
-  try{ const v = localStorage.getItem(dayKey(y,m,d)); return v ? JSON.parse(v) : []; }
-  catch(e){ return []; }
+  const key = dayKey(y,m,d);
+  if(!lsAvailable()){ return memStore[key] ? JSON.parse(JSON.stringify(memStore[key])) : []; }
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : []; }
+  catch(e){ return memStore[key] ? JSON.parse(JSON.stringify(memStore[key])) : []; }
 }
 async function saveDayRegs(y,m,d,list){
-  if(!lsAvailable()) return false;
-  try{ localStorage.setItem(dayKey(y,m,d), JSON.stringify(list)); return true; }
-  catch(e){ return false; }
+  const key = dayKey(y,m,d);
+  if(!lsAvailable()){
+    memStore[key] = list;
+    if(!storageWarned){ storageWarned = true; console.warn('localStorage indisponível — usando memória apenas para esta sessão.'); }
+    return true;
+  }
+  try{ localStorage.setItem(key, JSON.stringify(list)); return true; }
+  catch(e){
+    console.error('Falha ao salvar no localStorage:', e);
+    memStore[key] = list;
+    return true;
+  }
 }
 function regCountForDay(y,m,d){
-  if(!lsAvailable()) return 0;
-  try{ const v = localStorage.getItem(dayKey(y,m,d)); if(!v) return 0; const arr=JSON.parse(v); return Array.isArray(arr)?arr.length:0; }
-  catch(e){ return 0; }
+  const key = dayKey(y,m,d);
+  if(!lsAvailable()){ return memStore[key] ? memStore[key].length : 0; }
+  try{ const v = localStorage.getItem(key); if(!v) return 0; const arr=JSON.parse(v); return Array.isArray(arr)?arr.length:0; }
+  catch(e){ return memStore[key] ? memStore[key].length : 0; }
 }
 async function loadRegsForRange(start,end){
   const regsByDay = {};
-  if(!lsAvailable()) return regsByDay;
+  const useLs = lsAvailable();
   const months = new Set();
   eachDate(start,end).forEach(d=>months.add(`${d.getFullYear()}-${d.getMonth()}`));
-  months.forEach(key=>{
-    const prefix = `evt:${key}-`;
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.indexOf(prefix)===0){
-        try{ const v = localStorage.getItem(k); if(v) regsByDay[k.replace('evt:','')] = JSON.parse(v); }catch(e){}
+  if(useLs){
+    months.forEach(key=>{
+      const prefix = `evt:${key}-`;
+      for(let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if(k && k.indexOf(prefix)===0){
+          try{ const v = localStorage.getItem(k); if(v) regsByDay[k.replace('evt:','')] = JSON.parse(v); }catch(e){}
+        }
       }
-    }
+    });
+  }
+  Object.keys(memStore).forEach(k=>{
+    if(memStore[k] && memStore[k].length){ regsByDay[k.replace('evt:','')] = memStore[k]; }
   });
   return regsByDay;
 }
@@ -747,7 +883,7 @@ function renderAgCard(dateObj, feira, reg){
         <span class="ag-chev">›</span>
       </div>`;
   }
-  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
   return `
     <div class="ag-card reg">
       <div class="ag-date" style="background:#FFF3E2; color:#B5680B;"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -793,12 +929,13 @@ function renderCidades(){
   list.innerHTML = CIDADES.map(c=>{
     const hex = corHex[c];
     const count = feirasPorCidade[c].length;
+    const cc = count>0 ? `${count} feira(s) cadastrada(s)` : "Sem dados de feira ainda";
     return `
       <div class="city-card" data-cidade="${c}">
         <div class="city-swatch" style="background:${hex};">${ABREV[c]}</div>
         <div class="city-info">
           <div class="cn">${c}</div>
-          <div class="cc">${count} feira(s) cadastrada(s)</div>
+          <div class="cc">${cc}</div>
         </div>
         <span class="ag-chev">›</span>
       </div>`;
@@ -857,7 +994,7 @@ async function refreshRegistros(){
     regList.innerHTML = `<div class="empty-note-sm">Nenhum registro seu ainda para esse dia.</div>`;
     return;
   }
-  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
   regList.innerHTML = currentDayRegs.map(r=>`
     <div class="reg-card" data-id="${r.id}">
       <div class="rc-top">
@@ -909,6 +1046,8 @@ async function refreshRegistros(){
 function toggleFeiraRefSelect(){
   const tipo = document.getElementById('fTipo').value;
   const ref = document.getElementById('fFeiraRef');
+  const campanhaRow = document.getElementById('campanhaRow');
+
   if(tipo === "feira" && selectedDate){
     const wd = weekdayNameFromDate(selectedDate);
     const allDay = entriesFor("", "").filter(e=>e.dia===wd);
@@ -921,7 +1060,35 @@ function toggleFeiraRefSelect(){
       document.getElementById('fHorario').value = e.horario;
       document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
     };
-  } else { ref.style.display = "none"; }
+    campanhaRow.style.display = "none";
+  } else if(tipo === "campanha"){
+    ref.style.display = "none";
+    campanhaRow.style.display = "grid";
+    popRegiaoCampanha();
+  } else {
+    ref.style.display = "none";
+    campanhaRow.style.display = "none";
+  }
+}
+function popRegiaoCampanha(){
+  const selR = document.getElementById('fRegiaoCampanha');
+  selR.innerHTML = '<option value="">Região / cidade</option>' + REGIOES_CAMPANHA.map(r=>`<option value="${r}">${r}</option>`).join("");
+  selR.onchange = ()=> popLocalCampanha(selR.value);
+  popLocalCampanha("");
+}
+function popLocalCampanha(regiao){
+  const selL = document.getElementById('fLocalCampanha');
+  if(!regiao){ selL.innerHTML = '<option value="">Local</option>'; selL.onchange = null; return; }
+  const pontos = pontosCampanha[regiao] || [];
+  selL.innerHTML = '<option value="">Local</option>' + pontos.map((p,i)=>`<option value="${i}">${p[0]}</option>`).join("");
+  selL.onchange = ()=>{
+    if(selL.value===""){return;}
+    const p = pontos[parseInt(selL.value)];
+    document.getElementById('fTitulo').value = `Ponto de campanha — ${p[0]}`;
+    document.getElementById('fHorario').value = p[2];
+    document.getElementById('fLocal').value = `${p[1]} — ${regiao}`;
+    document.getElementById('fObs').value = p[3] || "";
+  };
 }
 function resetForm(){
   editingId = null;
@@ -939,29 +1106,36 @@ function resetForm(){
 }
 async function handleSalvar(){
   const msg = document.getElementById('formMsg');
-  const titulo = document.getElementById('fTitulo').value.trim();
-  if(!titulo){ msg.textContent = "Dê um título ao registro."; msg.className = "form-msg err"; return; }
-  const entry = {
-    id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
-    tipo: document.getElementById('fTipo').value,
-    titulo,
-    horario: document.getElementById('fHorario').value.trim(),
-    pessoa: document.getElementById('fPessoa').value.trim(),
-    local: document.getElementById('fLocal').value.trim(),
-    obs: document.getElementById('fObs').value.trim(),
-  };
-  const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
-  if(editingId){ currentDayRegs = currentDayRegs.map(r=> r.id===editingId ? entry : r); }
-  else { currentDayRegs = [...currentDayRegs, entry]; }
-  msg.textContent = "Salvando…"; msg.className = "form-msg";
-  const ok = await saveDayRegs(y,m,d,currentDayRegs);
-  if(ok){
-    msg.textContent = "Registro salvo."; msg.className = "form-msg ok";
-    await refreshRegistros();
-    buildCalendar(); renderAgendaDia();
-    resetForm();
-  } else {
-    msg.textContent = "Não foi possível salvar."; msg.className = "form-msg err";
+  try{
+    const titulo = document.getElementById('fTitulo').value.trim();
+    if(!titulo){ msg.textContent = "Dê um título ao registro."; msg.className = "form-msg err"; return; }
+    if(!selectedDate){ msg.textContent = "Selecione um dia no calendário primeiro."; msg.className = "form-msg err"; return; }
+    const entry = {
+      id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
+      tipo: document.getElementById('fTipo').value,
+      titulo,
+      horario: document.getElementById('fHorario').value.trim(),
+      pessoa: document.getElementById('fPessoa').value.trim(),
+      local: document.getElementById('fLocal').value.trim(),
+      obs: document.getElementById('fObs').value.trim(),
+    };
+    const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
+    if(editingId){ currentDayRegs = currentDayRegs.map(r=> r.id===editingId ? entry : r); }
+    else { currentDayRegs = [...currentDayRegs, entry]; }
+    msg.textContent = "Salvando…"; msg.className = "form-msg";
+    const ok = await saveDayRegs(y,m,d,currentDayRegs);
+    if(ok){
+      msg.textContent = "Registro salvo."; msg.className = "form-msg ok";
+      await refreshRegistros();
+      buildCalendar(); renderAgendaDia();
+      resetForm();
+    } else {
+      msg.textContent = "Não foi possível salvar."; msg.className = "form-msg err";
+    }
+  }catch(err){
+    console.error('Erro ao salvar registro:', err);
+    msg.textContent = "Erro inesperado ao salvar. Veja o console para detalhes.";
+    msg.className = "form-msg err";
   }
 }
 
@@ -971,7 +1145,7 @@ function printDayAgenda(){
   const feirasHtml = allDay.length ? allDay.map(e=>`
     <div class="pa-row"><div class="pa-h">${e.horario}</div><div class="pa-b"><strong>${e.cidade} — ${e.bairro}</strong>${e.endereco?`<span>${e.endereco}</span>`:""}</div></div>
   `).join("") : `<div class="pa-empty">Nenhuma feira oficial nesse dia.</div>`;
-  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
   const regsHtml = currentDayRegs.length ? currentDayRegs.map(r=>`
     <div class="pa-row"><div class="pa-h">${r.horario||"—"}</div>
       <div class="pa-b"><strong>[${tipoLabel[r.tipo]||"Outro"}] ${r.titulo}</strong>
@@ -1030,7 +1204,7 @@ function printReport(){
   const labelMap = {week:"Agenda da semana", month:"Agenda do mês", "60days":"Agenda — próximos 60 dias", augoct:"Agenda — agosto a outubro de 2026"};
   const title = labelMap[currentReport.type] || "Agenda";
   const sub = `${currentReport.start.getDate()}/${currentReport.start.getMonth()+1}/${currentReport.start.getFullYear()} a ${currentReport.end.getDate()}/${currentReport.end.getMonth()+1}/${currentReport.end.getFullYear()}`;
-  const tipoLabel = {feira:"Feira", reuniao:"Reunião", outro:"Outro"};
+  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
   const blocks = currentReport.grouped.map(g=>`
     <div class="pa-day-block"><h6>${fmtDateLabel(g.date)}</h6>
       ${g.feiras.map(e=>`<div class="pa-row"><div class="pa-h">${e.horario}</div><div class="pa-b"><strong>${e.cidade} — ${e.bairro}</strong>${e.endereco?`<span>${e.endereco}</span>`:""}</div></div>`).join("")}
