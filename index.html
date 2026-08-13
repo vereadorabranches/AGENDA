@@ -1005,12 +1005,7 @@ function buildCalendar(){
 
 function renderLegend(monthCitiesUsed, monthHasAnyReg){
   const legend = document.getElementById('legend');
-  let cidadesToShow = [...monthCitiesUsed].sort();
-  if(selCidade){ cidadesToShow = cidadesToShow.filter(c=>c===selCidade); }
-  if(!cidadesToShow.length){
-    legend.innerHTML = `<div class="empty-note-sm">${monthHasAnyReg ? "Nenhum registro com cidade definida neste mês." : "Nenhum registro cadastrado neste mês ainda. Toque em um dia para começar."}</div>`;
-    return;
-  }
+  const cidadesToShow = selCidade ? [selCidade] : CIDADES;
   legend.innerHTML = cidadesToShow.map(c=>`<div class="lg"><span class="dot" style="background:${corHex[c]}"></span>${c}</div>`).join("");
 }
 
