@@ -357,6 +357,35 @@
     <button class="btn-primary" id="btnAuthSubmit">Entrar</button>
     <div class="auth-msg" id="authMsg"></div>
     <div class="auth-toggle" id="authToggle">Não tem conta? <a id="authToggleLink">Criar conta</a></div>
+    <div class="auth-toggle" id="forgotRow" style="margin-top:6px;"><a id="forgotLink">Esqueci minha senha</a></div>
+  </div>
+</div>
+
+<div class="auth-screen" id="forgotScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="app-icon" style="background:var(--blue-mid); width:52px; height:52px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="#fff" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#fff" stroke-width="1.6"/></svg>
+    </div>
+    <h2>Recuperar senha</h2>
+    <p class="sub">Digite seu e-mail. Vamos mandar um link para você criar uma senha nova.</p>
+    <input id="forgotEmail" type="email" placeholder="E-mail" autocomplete="username">
+    <button class="btn-primary" id="btnForgotSubmit">Enviar link</button>
+    <div class="auth-msg" id="forgotMsg"></div>
+    <div class="auth-toggle"><a id="forgotVoltarLink">Voltar para o login</a></div>
+  </div>
+</div>
+
+<div class="auth-screen" id="resetScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="app-icon" style="background:var(--blue-mid); width:52px; height:52px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="#fff" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#fff" stroke-width="1.6"/></svg>
+    </div>
+    <h2>Criar nova senha</h2>
+    <p class="sub">Digite a nova senha da sua conta.</p>
+    <input id="resetSenha1" type="password" placeholder="Nova senha" autocomplete="new-password">
+    <input id="resetSenha2" type="password" placeholder="Confirme a nova senha" autocomplete="new-password">
+    <button class="btn-primary" id="btnResetSubmit">Salvar nova senha</button>
+    <div class="auth-msg" id="resetMsg"></div>
   </div>
 </div>
 
@@ -2277,7 +2306,7 @@ function atualizarUserBar(){
   document.getElementById('painelLiderancas').style.display = currentPerfil.papel === 'coordenador' ? 'block' : 'none';
 }
 async function irParaAppOuEspera(){
-  document.getElementById('authScreen').style.display = 'none';
+  ['authScreen','forgotScreen','resetScreen'].forEach(s=>{ document.getElementById(s).style.display = 'none'; });
   if(currentPerfil && currentPerfil.aprovado){
     document.getElementById('pendingScreen').style.display = 'none';
     document.getElementById('appShell').style.display = 'flex';
@@ -2353,7 +2382,7 @@ document.getElementById('btnAuthSubmit').addEventListener('click', async ()=>{
       await irParaAppOuEspera();
     } else {
       const {data, error} = await sb.auth.signInWithPassword({ email, password: senha });
-      if(error){ msg.textContent = 'E-mail ou senha incorretos.'; msg.className = 'auth-msg err'; return; }
+      if(error){ msg.textContent = 'Erro: ' + error.message; msg.className = 'auth-msg err'; return; }
       currentUser = { id: data.user.id, email: data.user.email };
       currentPerfil = await carregarOuCriarPerfil(data.user);
       await irParaAppOuEspera();
@@ -2371,6 +2400,59 @@ document.getElementById('btnSair').addEventListener('click', async ()=>{
   document.getElementById('authScreen').style.display = 'flex';
   document.getElementById('authEmail').value = '';
   document.getElementById('authSenha').value = '';
+});
+
+// ---------- ESQUECI MINHA SENHA ----------
+function mostrarTela(id){
+  ['authScreen','forgotScreen','resetScreen','pendingScreen'].forEach(s=>{
+    document.getElementById(s).style.display = (s===id) ? 'flex' : 'none';
+  });
+}
+document.getElementById('forgotLink').addEventListener('click', ()=>{
+  document.getElementById('forgotEmail').value = document.getElementById('authEmail').value || '';
+  document.getElementById('forgotMsg').textContent = '';
+  mostrarTela('forgotScreen');
+});
+document.getElementById('forgotVoltarLink').addEventListener('click', ()=> mostrarTela('authScreen'));
+document.getElementById('btnForgotSubmit').addEventListener('click', async ()=>{
+  const msg = document.getElementById('forgotMsg');
+  const email = document.getElementById('forgotEmail').value.trim();
+  if(!email){ msg.textContent = 'Digite seu e-mail.'; msg.className = 'auth-msg err'; return; }
+  msg.textContent = 'Enviando…'; msg.className = 'auth-msg';
+  const redirectTo = window.location.origin + window.location.pathname;
+  const {error} = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  if(error){ msg.textContent = 'Erro: ' + error.message; msg.className = 'auth-msg err'; return; }
+  msg.textContent = 'Link enviado! Confira seu e-mail (e a caixa de spam) e clique no link para criar uma nova senha.';
+  msg.className = 'auth-msg ok';
+});
+
+// Quando a pessoa clica no link do e-mail de recuperação, o Supabase dispara este evento
+sb.auth.onAuthStateChange((event, session)=>{
+  if(event === 'PASSWORD_RECOVERY'){
+    document.getElementById('resetMsg').textContent = '';
+    mostrarTela('resetScreen');
+  }
+});
+document.getElementById('btnResetSubmit').addEventListener('click', async ()=>{
+  const msg = document.getElementById('resetMsg');
+  const s1 = document.getElementById('resetSenha1').value;
+  const s2 = document.getElementById('resetSenha2').value;
+  if(!s1 || s1.length < 6){ msg.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; msg.className = 'auth-msg err'; return; }
+  if(s1 !== s2){ msg.textContent = 'As senhas não são iguais.'; msg.className = 'auth-msg err'; return; }
+  msg.textContent = 'Salvando…'; msg.className = 'auth-msg';
+  const {error} = await sb.auth.updateUser({ password: s1 });
+  if(error){ msg.textContent = 'Erro: ' + error.message; msg.className = 'auth-msg err'; return; }
+  msg.textContent = 'Senha alterada! Redirecionando…'; msg.className = 'auth-msg ok';
+  setTimeout(async ()=>{
+    const {data:{session}} = await sb.auth.getSession();
+    if(session && session.user){
+      currentUser = { id: session.user.id, email: session.user.email };
+      currentPerfil = await carregarOuCriarPerfil(session.user);
+      await irParaAppOuEspera();
+    } else {
+      mostrarTela('authScreen');
+    }
+  }, 1200);
 });
 
 setAuthMode('login');
