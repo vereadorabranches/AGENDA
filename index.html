@@ -1020,18 +1020,19 @@ function renderAgendaDia(){
   const isToday = sameDay(selectedDate, hoje);
   title.textContent = isToday ? "Agenda do dia" : `Agenda — ${selectedDate.getDate()}/${selectedDate.getMonth()+1}`;
 
-  const feiras = feirasForDate(selectedDate);
   const y=selectedDate.getFullYear(), m=selectedDate.getMonth(), d=selectedDate.getDate();
 
-  loadDayRegs(y,m,d).then(regs=>{
+  loadDayRegs(y,m,d).then(regsAll=>{
+    let regs = regsAll;
+    if(selCidade){ regs = regs.filter(r=> r.cidade === selCidade); }
+    if(selDia && weekdayNameFromDate(selectedDate) !== selDia){ regs = []; }
+
     const list = document.getElementById('agendaDiaList');
-    if(!feiras.length && !regs.length){
-      list.innerHTML = `<div class="empty-note">Nenhuma feira ou registro para esse dia.</div>`;
+    if(!regs.length){
+      list.innerHTML = `<div class="empty-note">Nenhum registro cadastrado para esse dia ainda. Use "+ Novo registro" para começar.</div>`;
       return;
     }
-    const items = [];
-    feiras.slice(0,6).forEach(e=>items.push(renderAgCard(selectedDate, e, null)));
-    regs.forEach(r=>items.push(renderAgCard(selectedDate, null, r)));
+    const items = regs.map(r=> renderAgCard(selectedDate, null, r));
     list.innerHTML = items.join("");
     list.querySelectorAll('.ag-card').forEach(el=>{
       el.addEventListener('click', ()=> openDay(selectedDate));
@@ -1512,15 +1513,15 @@ async function buildReport(type){
   const grouped = [];
   dates.forEach(d=>{
     const y=d.getFullYear(), m=d.getMonth(), dd=d.getDate();
-    const feiras = feirasForDate(d);
-    const regs = regsByDay[`${y}-${m}-${dd}`] || [];
-    if(feiras.length || regs.length) grouped.push({date:d, feiras, regs});
+    let regs = regsByDay[`${y}-${m}-${dd}`] || [];
+    if(selCidade){ regs = regs.filter(r=> r.cidade === selCidade); }
+    if(selDia && weekdayNameFromDate(d) !== selDia){ regs = []; }
+    if(regs.length) grouped.push({date:d, feiras:[], regs});
   });
   currentReport = {type, start, end, grouped};
-  if(!grouped.length){ body.innerHTML = `<div class="empty-note">Nada encontrado nesse período com o filtro atual.</div>`; return; }
+  if(!grouped.length){ body.innerHTML = `<div class="empty-note">Nenhum registro cadastrado nesse período${selCidade? " para "+selCidade:""}.</div>`; return; }
   body.innerHTML = grouped.map(g=>`
     <div class="rep-day-head">${fmtDateLabel(g.date)}</div>
-    ${g.feiras.map(e=>renderAgCard(g.date,e,null)).join("")}
     ${g.regs.map(r=>renderAgCard(g.date,null,r)).join("")}
   `).join("");
 }
