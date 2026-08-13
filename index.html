@@ -808,6 +808,26 @@ function googleCalendarLink(title, dateObj, horario, location, details, email){
   }
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
+function escapeAttr(s){ return String(s==null?"":s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function gcalTriggerAttrs(title, dateObj, horario, location, details, email){
+  const y=dateObj.getFullYear(), m=dateObj.getMonth(), d=dateObj.getDate();
+  return `href="#" data-title="${escapeAttr(title)}" data-date="${y}-${m}-${d}" data-horario="${escapeAttr(horario)}" data-local="${escapeAttr(location)}" data-details="${escapeAttr(details)}" data-email="${escapeAttr(email||'')}"`;
+}
+// Delegação global: clicar em qualquer elemento .gcal-trigger pede o(s) e-mail(s) do(s) convidado(s)
+// antes de abrir o Google Agenda já com esses convidados prontos para receber o evento.
+document.addEventListener('click', function(ev){
+  const el = ev.target.closest('.gcal-trigger');
+  if(!el) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const parts = el.dataset.date.split('-').map(Number);
+  const dateObj = new Date(parts[0], parts[1], parts[2]);
+  const existing = el.dataset.email || '';
+  const input = window.prompt('Convidar por e-mail no Google Agenda — separe vários por vírgula (a pessoa recebe o convite para aceitar). Deixe em branco para não convidar ninguém agora:', existing);
+  if(input === null) return; // cancelou
+  const url = googleCalendarLink(el.dataset.title, dateObj, el.dataset.horario, el.dataset.local, el.dataset.details, input.trim());
+  window.open(url, '_blank', 'noopener');
+});
 function icsEscape(s){ return String(s||"").replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
 function buildICS(events){
   let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Feiras Vale do Paraiba//PT-BR\r\nCALSCALE:GREGORIAN\r\n";
@@ -1027,7 +1047,7 @@ function renderAgCard(dateObj, feira, reg){
   const ICO_GCAL = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2.4" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 9.5h17M8 3v3.4M16 3v3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12 13v5M9.5 15.5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>`;
   if(feira){
     const hex = corHex[feira.cidade];
-    const gcal = googleCalendarLink(`Feira — ${feira.bairro} (${feira.cidade})`, dateObj, feira.horario, `${feira.bairro}${feira.endereco?", "+feira.endereco:""} — ${feira.cidade}`, `Feira livre em ${feira.cidade}.`);
+    const gcalAttrs = gcalTriggerAttrs(`Feira — ${feira.bairro} (${feira.cidade})`, dateObj, feira.horario, `${feira.bairro}${feira.endereco?", "+feira.endereco:""} — ${feira.cidade}`, `Feira livre em ${feira.cidade}.`, '');
     return `
       <div class="ag-card">
         <div class="ag-date" style="background:${hex}18; color:${hex};"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -1036,13 +1056,13 @@ function renderAgCard(dateObj, feira, reg){
           <div class="ag-meta">${ICO_CLOCK} ${feira.horario}</div>
           <div class="ag-meta">${ICO_PIN} ${feira.bairro}</div>
         </div>
-        <a class="ag-gcal" href="${gcal}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Adicionar ao Google Agenda">${ICO_GCAL}</a>
+        <a class="ag-gcal gcal-trigger" ${gcalAttrs} title="Adicionar ao Google Agenda (com convidados)">${ICO_GCAL}</a>
         <div class="ag-tag" style="background:${hex}18; color:${hex};">${ABREV[feira.cidade]}</div>
         <span class="ag-chev">›</span>
       </div>`;
   }
   const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
-  const gcalReg = googleCalendarLink(reg.titulo, dateObj, reg.horario, reg.local||'', [reg.pessoa?`Com: ${reg.pessoa}`:'', reg.obs||''].filter(Boolean).join(' — '), reg.email||'');
+  const gcalRegAttrs = gcalTriggerAttrs(reg.titulo, dateObj, reg.horario, reg.local||'', [reg.pessoa?`Com: ${reg.pessoa}`:'', reg.obs||''].filter(Boolean).join(' — '), reg.email||'');
   return `
     <div class="ag-card reg">
       <div class="ag-date" style="background:#FFF3E2; color:#B5680B;"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -1051,7 +1071,7 @@ function renderAgCard(dateObj, feira, reg){
         <div class="ag-meta">${[reg.horario, reg.pessoa?("com "+reg.pessoa):""].filter(Boolean).join(" · ") || tipoLabel[reg.tipo]}</div>
         ${reg.local?`<div class="ag-meta">${ICO_PIN} ${reg.local}</div>`:""}
       </div>
-      <a class="ag-gcal" href="${gcalReg}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Adicionar ao Google Agenda">${ICO_GCAL}</a>
+      <a class="ag-gcal gcal-trigger" ${gcalRegAttrs} title="Adicionar ao Google Agenda (com convidados)">${ICO_GCAL}</a>
       <div class="ag-tag" style="background:#FFF3E2; color:#B5680B;">${tipoLabel[reg.tipo]||"Outro"}</div>
       <span class="ag-chev">›</span>
     </div>`;
@@ -1169,7 +1189,7 @@ async function openDay(dateObj){
       <div class="feira-item">
         <div class="fi-main"><strong>${e.cidade}</strong> — ${e.bairro}<span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
         <div class="fi-actions">
-          <a href="${googleCalendarLink(`Feira — ${e.bairro} (${e.cidade})`, dateObj, e.horario, `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`, `Feira livre em ${e.cidade}.`)}" target="_blank" rel="noopener" class="gcal-link-inline" style="text-decoration:none; display:inline-block;">Agenda</a>
+          <a ${gcalTriggerAttrs(`Feira — ${e.bairro} (${e.cidade})`, dateObj, e.horario, `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`, `Feira livre em ${e.cidade}.`, '')} class="gcal-link-inline gcal-trigger" style="text-decoration:none; display:inline-block;">Agenda</a>
           <button data-idx="${i}" class="use-feira">Usar</button>
         </div>
       </div>
@@ -1222,7 +1242,7 @@ async function refreshRegistros(){
           </div>
         </div>
         <div class="rc-actions">
-          <a href="${googleCalendarLink(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '), r.email||'')}" target="_blank" rel="noopener" class="gcal-link">Agenda</a>
+          <a ${gcalTriggerAttrs(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '), r.email||'')} class="gcal-link gcal-trigger">Agenda</a>
           <button class="edit-reg">Editar</button>
           <button class="del-reg">Excluir</button>
         </div>
