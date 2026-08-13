@@ -333,7 +333,8 @@
     </section>
 
     <section id="view-agenda" class="view">
-      <div class="section-head"><h3>Agenda — próximos dias</h3></div>
+      <div class="section-head"><h3>Agenda</h3></div>
+      <div class="rep-presets" id="agendaMonthTabs"></div>
       <div id="agendaFullList"></div>
     </section>
 
@@ -714,6 +715,12 @@ function regCountForDay(y,m,d){
   try{ const v = localStorage.getItem(key); if(!v) return 0; const arr=JSON.parse(v); return Array.isArray(arr)?arr.length:0; }
   catch(e){ return memStore[key] ? memStore[key].length : 0; }
 }
+function getDayRegsSync(y,m,d){
+  const key = dayKey(y,m,d);
+  if(!lsAvailable()){ return memStore[key] || []; }
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : (memStore[key]||[]); }
+  catch(e){ return memStore[key] || []; }
+}
 async function loadRegsForRange(start,end){
   const regsByDay = {};
   const useLs = lsAvailable();
@@ -888,6 +895,9 @@ function buildCalendar(){
   let nextD = 1;
   while(cells.length < 42){ cells.push({d:nextD++, out:true, dir:1}); }
 
+  const monthCitiesUsed = new Set();
+  let monthHasAnyReg = false;
+
   cells.forEach(c=>{
     let realMonth = viewMonth, realYear = viewYear;
     if(c.dir===-1){ realMonth = viewMonth-1; realYear = viewYear; if(realMonth<0){realMonth=11; realYear--;} }
@@ -904,16 +914,31 @@ function buildCalendar(){
     let html = `<span class="n">${c.d}</span>`;
 
     if(!c.out){
-      const matches = feirasForDate(dateObj);
-      const citiesHere = [...new Set(matches.map(e=>e.cidade))];
-      const regCount = regCountForDay(realYear, realMonth, c.d);
+      let dayRegs = getDayRegsSync(realYear, realMonth, c.d);
+      if(selCidade){ dayRegs = dayRegs.filter(r=> r.cidade === selCidade); }
+      if(selDia && weekdayNameFromDate(dateObj) !== selDia){ dayRegs = []; }
 
-      if(citiesHere.length){
-        const shown = citiesHere.slice(0,3);
-        html += `<div class="dots">` + shown.map(ci=>`<span class="dot" style="background:${corHex[ci]}"></span>`).join("") +
-          (citiesHere.length>3 ? `<span class="more">+${citiesHere.length-3}</span>` : "") + `</div>`;
+      if(dayRegs.length){
+        dayRegs.forEach(r=>{ if(r.cidade){ monthCitiesUsed.add(r.cidade); } });
+        monthHasAnyReg = true;
+
+        if(selCidade){
+          const shown = dayRegs.slice(0,3);
+          html += `<div class="badges">` + shown.map(r=>{
+            const cor = r.cidade ? corHex[r.cidade] : '#B5680B';
+            const txt = `${r.titulo||''}${r.horario?" · "+r.horario:""}`;
+            return `<div class="badge" style="border-left-color:${cor}">${txt}</div>`;
+          }).join("") + `</div>`;
+          if(dayRegs.length>3){ html += `<div class="more">+${dayRegs.length-3} registro(s)</div>`; }
+        } else {
+          const cidadeColors = [...new Set(dayRegs.filter(r=>r.cidade).map(r=>corHex[r.cidade]))];
+          const hasNoCityReg = dayRegs.some(r=>!r.cidade);
+          const dotColors = hasNoCityReg ? [...cidadeColors, '#B5680B'] : cidadeColors;
+          const shown = dotColors.slice(0,3);
+          html += `<div class="dots">` + shown.map(col=>`<span class="dot" style="background:${col}"></span>`).join("") +
+            (dotColors.length>3 ? `<span class="more">+${dotColors.length-3}</span>` : "") + `</div>`;
+        }
       }
-      if(regCount>0){ html += `<span class="reg-mark"></span>`; }
     }
 
     cell.innerHTML = html;
@@ -934,12 +959,17 @@ function buildCalendar(){
     grid.appendChild(cell);
   });
 
-  renderLegend();
+  renderLegend(monthCitiesUsed, monthHasAnyReg);
 }
 
-function renderLegend(){
+function renderLegend(monthCitiesUsed, monthHasAnyReg){
   const legend = document.getElementById('legend');
-  const cidadesToShow = selCidade ? [selCidade] : CIDADES;
+  let cidadesToShow = [...monthCitiesUsed].sort();
+  if(selCidade){ cidadesToShow = cidadesToShow.filter(c=>c===selCidade); }
+  if(!cidadesToShow.length){
+    legend.innerHTML = `<div class="empty-note-sm">${monthHasAnyReg ? "Nenhum registro com cidade definida neste mês." : "Nenhum registro cadastrado neste mês ainda. Toque em um dia para começar."}</div>`;
+    return;
+  }
   legend.innerHTML = cidadesToShow.map(c=>`<div class="lg"><span class="dot" style="background:${corHex[c]}"></span>${c}</div>`).join("");
 }
 
@@ -1005,20 +1035,48 @@ function renderAgCard(dateObj, feira, reg){
     </div>`;
 }
 
+let agendaMonthIdx = 0;
+function getAgendaMonths(){
+  const months = [];
+  for(let i=0;i<3;i++){
+    let m = hoje.getMonth()+i, y = hoje.getFullYear();
+    while(m>11){ m-=12; y++; }
+    months.push({y, m});
+  }
+  return months;
+}
+function renderAgendaMonthTabs(){
+  const wrap = document.getElementById('agendaMonthTabs');
+  const months = getAgendaMonths();
+  wrap.innerHTML = months.map((mo,i)=>`<button data-idx="${i}" class="${i===agendaMonthIdx?'active':''}">${MESES[mo.m]}</button>`).join("");
+  wrap.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      agendaMonthIdx = parseInt(btn.dataset.idx);
+      renderAgendaFull();
+    });
+  });
+}
+
 async function renderAgendaFull(){
+  renderAgendaMonthTabs();
   const list = document.getElementById('agendaFullList');
   list.innerHTML = `<div class="loading-txt">Carregando…</div>`;
-  const start = new Date(selectedDate);
-  const end = new Date(start); end.setDate(end.getDate()+60);
+
+  const months = getAgendaMonths();
+  const {y, m} = months[agendaMonthIdx];
+  const isCurrentMonth = (y===hoje.getFullYear() && m===hoje.getMonth());
+  const start = isCurrentMonth ? new Date(hoje) : new Date(y, m, 1);
+  const end = new Date(y, m+1, 0);
+
   const regsByDay = await loadRegsForRange(start,end);
   const dates = eachDate(start,end);
 
   const blocks = [];
   const dateForCard = [];
   dates.forEach(d=>{
-    const y=d.getFullYear(), m=d.getMonth(), dd=d.getDate();
+    const yy=d.getFullYear(), mm=d.getMonth(), dd=d.getDate();
     const feiras = feirasForDate(d);
-    const regs = regsByDay[`${y}-${m}-${dd}`] || [];
+    const regs = regsByDay[`${yy}-${mm}-${dd}`] || [];
     if(!feiras.length && !regs.length) return;
     const items = [];
     feiras.forEach(e=>{ items.push(renderAgCard(d, e, null)); dateForCard.push(d); });
@@ -1026,7 +1084,7 @@ async function renderAgendaFull(){
     blocks.push(`<div class="rep-day-head">${fmtDateLabel(d)}</div>${items.join("")}`);
   });
 
-  list.innerHTML = blocks.length ? blocks.join("") : `<div class="empty-note">Nada encontrado nos próximos 60 dias com o filtro atual.</div>`;
+  list.innerHTML = blocks.length ? blocks.join("") : `<div class="empty-note">Nada encontrado em ${MESES[m].toLowerCase()} com o filtro atual.</div>`;
   list.querySelectorAll('.ag-card').forEach((el,i)=>{
     el.addEventListener('click', ()=>{ const d=dateForCard[i]; if(d) openDay(d); });
   });
