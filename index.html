@@ -275,13 +275,13 @@
       </div>
     </div>
     <svg class="header-deco" width="150" height="130" viewBox="0 0 150 130" fill="none">
-      <path d="M18 78 Q6 58 22 40 Q26 18 52 16 Q68 4 92 14 Q118 8 130 28 Q148 32 143 54 Q152 72 132 84 Q128 106 101 100 Q80 114 58 100 Q34 106 23 90 Q8 92 18 78Z" fill="#5C8DF2" opacity="0.24"/>
-      <circle cx="48" cy="52" r="2.6" fill="#fff" opacity="0.5"/>
-      <circle cx="100" cy="66" r="2.2" fill="#fff" opacity="0.4"/>
-      <circle cx="70" cy="88" r="2.2" fill="#fff" opacity="0.4"/>
-      <circle cx="82" cy="52" r="27" fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="1.3"/>
-      <path d="M82 37c-9 0-14.5 7.6-14.5 14.5 0 10 14.5 24 14.5 24s14.5-14 14.5-24C96.5 44.6 91 37 82 37Z" fill="#fff"/>
-      <circle cx="82" cy="51.5" r="5.4" fill="#04307C"/>
+      <path d="M 113.5,85.0 L 101.1,91.5 L 83.3,107.4 L 84.4,106.1 L 81.9,105.6 L 80.9,102.3 L 75.8,103.4 L 75.8,97.5 L 64.7,97.5 L 66.3,92.5 L 60.0,84.9 L 58.9,74.3 L 54.2,70.1 L 42.5,71.1 L 34.5,66.6 L 21.4,64.3 L 19.6,66.7 L 6.0,65.5 L 16.8,58.5 L 25.1,46.3 L 25.0,43.0 L 29.0,39.8 L 29.5,35.2 L 45.1,22.6 L 65.3,24.9 L 65.7,29.9 L 69.5,28.0 L 70.9,32.3 L 72.1,28.0 L 81.0,27.6 L 81.1,25.9 L 86.4,27.4 L 87.0,25.3 L 92.9,24.9 L 96.7,28.8 L 95.7,32.4 L 98.7,35.6 L 96.5,39.1 L 100.1,47.4 L 107.8,48.1 L 104.5,61.0 L 109.4,64.6 L 110.1,70.1 L 118.9,69.5 L 120.0,65.2 L 124.9,66.4 L 134.0,62.6 L 136.7,65.7 L 144.0,66.7 L 134.3,71.5 L 132.8,75.2 L 135.3,77.4 L 124.8,81.3 L 124.8,84.4 L 113.5,85.0 Z" fill="#5C8DF2" opacity="0.26" stroke="#fff" stroke-opacity="0.15" stroke-width="0.6"/>
+      <circle cx="105" cy="60" r="2" fill="#fff" opacity="0.45"/>
+      <circle cx="90" cy="45" r="1.7" fill="#fff" opacity="0.35"/>
+      <circle cx="112" cy="82" r="1.7" fill="#fff" opacity="0.35"/>
+      <circle cx="117.4" cy="74.5" r="14" fill="none" stroke="#fff" stroke-opacity="0.18" stroke-width="1.2"/>
+      <path d="M117.4 62c-6.6 0-10.7 5.6-10.7 10.7 0 7.4 10.7 17.8 10.7 17.8s10.7-10.4 10.7-17.8c0-5.1-4.1-10.7-10.7-10.7Z" fill="#fff"/>
+      <circle cx="117.4" cy="72.3" r="4" fill="#04307C"/>
     </svg>
   </header>
 
@@ -400,6 +400,7 @@
           </select>
           <select id="fCidade"></select>
         </div>
+        <input id="fCidadeCustom" placeholder="Nome da cidade" style="display:none;">
         <input id="fBuscaLocal" placeholder="Buscar local pelo nome…" style="display:none;">
         <select id="fFeiraRef" style="display:none; margin-bottom:8px;"></select>
         <button type="button" id="btnIncluirLocal" style="display:none; background:transparent; border:1px dashed var(--blue); color:var(--blue); font-family:'IBM Plex Sans',sans-serif; font-weight:600; font-size:12.5px; padding:8px 12px; border-radius:8px; cursor:pointer; margin-bottom:8px; width:100%;">+ Incluir local (não está na lista)</button>
@@ -966,13 +967,13 @@ function buildCalendar(){
         if(selCidade){
           const shown = dayRegs.slice(0,3);
           html += `<div class="badges">` + shown.map(r=>{
-            const cor = r.cidade ? corHex[r.cidade] : '#B5680B';
+            const cor = r.cidade ? corForCidade(r.cidade) : '#B5680B';
             const txt = `${r.titulo||''}${r.horario?" · "+r.horario:""}`;
             return `<div class="badge" style="border-left-color:${cor}">${txt}</div>`;
           }).join("") + `</div>`;
           if(dayRegs.length>3){ html += `<div class="more">+${dayRegs.length-3} registro(s)</div>`; }
         } else {
-          const cidadeColors = [...new Set(dayRegs.filter(r=>r.cidade).map(r=>corHex[r.cidade]))];
+          const cidadeColors = [...new Set(dayRegs.filter(r=>r.cidade).map(r=>corForCidade(r.cidade)))];
           const hasNoCityReg = dayRegs.some(r=>!r.cidade);
           const dotColors = hasNoCityReg ? [...cidadeColors, '#B5680B'] : cidadeColors;
           const shown = dotColors.slice(0,3);
@@ -1251,7 +1252,15 @@ async function refreshRegistros(){
       if(!r) return;
       editingId = id;
       popFCidade();
-      document.getElementById('fCidade').value = r.cidade || "";
+      if(r.cidade && !CIDADES.includes(r.cidade)){
+        document.getElementById('fCidade').value = '__custom__';
+        document.getElementById('fCidadeCustom').style.display = 'block';
+        document.getElementById('fCidadeCustom').value = r.cidade;
+      } else {
+        document.getElementById('fCidade').value = r.cidade || "";
+        document.getElementById('fCidadeCustom').style.display = 'none';
+        document.getElementById('fCidadeCustom').value = "";
+      }
       document.getElementById('fBuscaLocal').value = "";
       document.getElementById('fTipo').value = r.tipo;
       toggleFeiraRefSelect();
@@ -1402,12 +1411,30 @@ function popLocalCampanha(regiao){
 }
 function popFCidade(){
   const sel = document.getElementById('fCidade');
-  sel.innerHTML = '<option value="">Cidade (opcional)</option>' + CIDADES.map(c=>`<option value="${c}">${c}</option>`).join("");
+  sel.innerHTML = '<option value="">Cidade (opcional)</option>' + CIDADES.map(c=>`<option value="${c}">${c}</option>`).join("") + '<option value="__custom__">+ Outra cidade (digitar)</option>';
+  sel.onchange = ()=>{
+    const custom = document.getElementById('fCidadeCustom');
+    if(sel.value === '__custom__'){
+      custom.style.display = 'block';
+      custom.focus();
+    } else {
+      custom.style.display = 'none';
+    }
+    if(document.getElementById('fTipo').value === 'feira'){ refreshFeiraOptions(); }
+  };
+}
+function corForCidade(cidade){ return corHex[cidade] || '#6B7280'; }
+function getEntryCidade(){
+  const sel = document.getElementById('fCidade').value;
+  if(sel === '__custom__'){ return document.getElementById('fCidadeCustom').value.trim(); }
+  return sel;
 }
 function resetForm(){
   editingId = null;
   popFCidade();
   document.getElementById('fCidade').value = "";
+  document.getElementById('fCidadeCustom').style.display = "none";
+  document.getElementById('fCidadeCustom').value = "";
   document.getElementById('fBuscaLocal').value = "";
   document.getElementById('fTipo').value = "feira";
   toggleFeiraRefSelect();
@@ -1431,7 +1458,7 @@ async function handleSalvar(){
     const entry = {
       id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
       tipo: document.getElementById('fTipo').value,
-      cidade: document.getElementById('fCidade').value,
+      cidade: getEntryCidade(),
       titulo,
       horario: document.getElementById('fHorario').value.trim(),
       pessoa: document.getElementById('fPessoa').value.trim(),
@@ -1600,9 +1627,6 @@ document.getElementById('btnGoReport').addEventListener('click', ()=> switchView
 document.getElementById('closeDetail').addEventListener('click', closeDayModal);
 document.getElementById('dayModalOverlay').addEventListener('click', e=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
 document.getElementById('fTipo').addEventListener('change', toggleFeiraRefSelect);
-document.getElementById('fCidade').addEventListener('change', ()=>{
-  if(document.getElementById('fTipo').value === 'feira'){ refreshFeiraOptions(); }
-});
 document.getElementById('fBuscaLocal').addEventListener('input', ()=>{
   const tipo = document.getElementById('fTipo').value;
   if(tipo === 'feira'){ refreshFeiraOptions(); }
