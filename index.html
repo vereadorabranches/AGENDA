@@ -353,7 +353,6 @@
       </div>
       <div class="empty-note-sm" id="reportFilterNote" style="margin-bottom:10px;"></div>
       <div id="reportBody"><div class="loading-txt">Selecione um período acima.</div></div>
-      <button class="btn-print" id="btnExportICS" style="background:var(--blue); margin-top:10px;">Exportar para Google Agenda (.ics)</button>
       <button class="btn-print" id="printReportBtn">Imprimir relatório</button>
       <button class="btn-print" id="btnLimparTudo" style="background:#fff; color:#B3261E; border:1px solid #F1B4AE; margin-top:18px;">Apagar todos os registros salvos</button>
     </section>
@@ -1502,6 +1501,34 @@ function filterNoteText(){
   return "Filtro atual — " + parts.join(" · ");
 }
 let currentReport = {type:null, start:null, end:null, grouped:[]};
+function nextDateForWeekday(diaNome, fromDate){
+  const idx = WEEKDAY_NAMES.indexOf(diaNome);
+  const d = new Date(fromDate); d.setHours(0,0,0,0);
+  if(idx<0) return d;
+  while(d.getDay()!==idx){ d.setDate(d.getDate()+1); }
+  return d;
+}
+async function quickAddFeira(entry){
+  const target = nextDateForWeekday(entry.dia, new Date());
+  viewMonth = target.getMonth(); viewYear = target.getFullYear();
+  document.getElementById('selMes') && (document.getElementById('selMes').value = viewMonth);
+  document.getElementById('selAno') && (document.getElementById('selAno').value = viewYear);
+  switchView('calendario');
+  buildCalendar();
+  selectedDate = target;
+  buildCalendar();
+  renderAgendaDia();
+  await openDay(target);
+  popFCidade();
+  document.getElementById('fCidade').value = entry.cidade;
+  document.getElementById('fBuscaLocal').value = "";
+  document.getElementById('fTipo').value = "feira";
+  toggleFeiraRefSelect();
+  document.getElementById('fTitulo').value = `Ir à feira — ${entry.bairro}`;
+  document.getElementById('fHorario').value = entry.horario;
+  document.getElementById('fLocal').value = `${entry.bairro}${entry.endereco?", "+entry.endereco:""} — ${entry.cidade}`;
+  document.getElementById('fTitulo').focus();
+}
 async function buildReport(type){
   document.querySelectorAll('.rep-presets button').forEach(b=>b.classList.toggle('active', b.dataset.range===type));
   document.getElementById('reportFilterNote').textContent = filterNoteText();
@@ -1519,7 +1546,26 @@ async function buildReport(type){
     if(regs.length) grouped.push({date:d, feiras:[], regs});
   });
   currentReport = {type, start, end, grouped};
-  if(!grouped.length){ body.innerHTML = `<div class="empty-note">Nenhum registro cadastrado nesse período${selCidade? " para "+selCidade:""}.</div>`; return; }
+  if(!grouped.length){
+    let matches = [];
+    let extra = "";
+    if(selCidade){
+      matches = entriesFor(selCidade, selDia);
+      if(matches.length){
+        extra = `<h4 style="margin-top:18px;">Feiras oficiais de ${selCidade}${selDia? " — "+selDia.toLowerCase():""} — cadastre em 1 clique</h4>` +
+          matches.slice(0,15).map((e,i)=>`
+            <div class="feira-item">
+              <div class="fi-main"><strong>${e.dia}</strong> — ${e.bairro}<span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
+              <button class="use-feira quick-add-feira" data-idx="${i}">+ Cadastrar</button>
+            </div>`).join("");
+      }
+    }
+    body.innerHTML = `<div class="empty-note">Nenhum registro cadastrado nesse período${selCidade? " para "+selCidade:""}.</div>${extra}`;
+    body.querySelectorAll('.quick-add-feira').forEach(btn=>{
+      btn.addEventListener('click', ()=> quickAddFeira(matches[parseInt(btn.dataset.idx)]));
+    });
+    return;
+  }
   body.innerHTML = grouped.map(g=>`
     <div class="rep-day-head">${fmtDateLabel(g.date)}</div>
     ${g.regs.map(r=>renderAgCard(g.date,null,r)).join("")}
@@ -1602,31 +1648,6 @@ document.getElementById('btnSalvar').addEventListener('click', handleSalvar);
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 document.getElementById('printDayBtn').addEventListener('click', printDayAgenda);
 document.getElementById('printReportBtn').addEventListener('click', printReport);
-document.getElementById('btnExportICS').addEventListener('click', ()=>{
-  if(!currentReport.grouped.length){ alert("Escolha um período do relatório primeiro."); return; }
-  const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
-  const events = [];
-  currentReport.grouped.forEach(g=>{
-    g.feiras.forEach(e=>{
-      events.push({
-        title: `Feira — ${e.bairro} (${e.cidade})`,
-        dateObj: g.date, horario: e.horario,
-        location: `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`,
-        details: `Feira livre em ${e.cidade}.`
-      });
-    });
-    g.regs.forEach(r=>{
-      events.push({
-        title: `[${tipoLabel[r.tipo]||"Outro"}] ${r.titulo}`,
-        dateObj: g.date, horario: r.horario,
-        location: r.local||'',
-        details: [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — ')
-      });
-    });
-  });
-  const labelMap = {week:"semana", month:"mes", "60days":"60dias", augoct:"ago-out-2026"};
-  downloadICS(`agenda-feiras-${labelMap[currentReport.type]||"periodo"}.ics`, events);
-});
 
 document.getElementById('btnLimparTudo').addEventListener('click', ()=>{
   const step1 = window.confirm("Isso vai apagar TODOS os seus registros salvos (reuniões, campanha, visitas etc.) neste navegador. As feiras oficiais não são afetadas. Não pode ser desfeito. Continuar?");
