@@ -16,6 +16,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --app-max-width:480px;
@@ -172,22 +173,94 @@
     font-weight:600; font-size:13.5px; padding:12px; border-radius:10px; cursor:pointer; margin-top:6px;
   }
 
+  /* ---------------- LOGIN ---------------- */
+  .auth-screen{
+    position:fixed; inset:0; background:linear-gradient(150deg, var(--navy), var(--navy-2) 70%);
+    display:flex; align-items:center; justify-content:center; z-index:2000; padding:20px;
+  }
+  .auth-card{
+    background:#fff; border-radius:18px; padding:28px 24px; width:100%; max-width:380px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.3);
+  }
+  .auth-card .app-icon{margin:0 auto 14px auto;}
+  .auth-card h2{font-family:'IBM Plex Sans',sans-serif; font-weight:800; font-size:20px; text-align:center; margin:0 0 4px 0; color:var(--ink);}
+  .auth-card p.sub{text-align:center; font-size:12.5px; color:var(--ink-soft); margin:0 0 20px 0;}
+  .auth-card input{
+    width:100%; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; padding:11px 12px;
+    border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink); margin-bottom:10px;
+  }
+  .auth-card input:focus{outline:2px solid var(--blue-mid); border-color:var(--blue-mid);}
+  .auth-card .btn-primary{width:100%; padding:12px; font-size:14px; margin-top:4px;}
+  .auth-toggle{text-align:center; margin-top:16px; font-size:12.5px; color:var(--ink-soft);}
+  .auth-toggle a{color:var(--blue); font-weight:600; text-decoration:none; cursor:pointer;}
+  .auth-msg{font-size:12.5px; text-align:center; margin-top:10px; min-height:16px;}
+  .auth-msg.err{color:#B3261E;}
+  .auth-msg.ok{color:#2E7D32;}
+  .auth-loading{color:#fff; text-align:center; font-family:'IBM Plex Sans',sans-serif; font-size:14px;}
+
+  /* ---------------- USER BAR ---------------- */
+  .user-bar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#fff; margin:10px 14px 0 14px; padding:9px 12px; border-radius:12px;
+    box-shadow:0 2px 8px rgba(18,36,74,0.06); font-size:12px;
+  }
+  .user-bar .who{display:flex; align-items:center; gap:8px; min-width:0;}
+  .user-bar .avatar{
+    width:26px; height:26px; border-radius:50%; background:var(--blue); color:#fff; flex:none;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px;
+  }
+  .user-bar .info{min-width:0;}
+  .user-bar .info .nm{font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px;}
+  .user-bar .info .rl{color:var(--ink-soft); font-size:10.5px;}
+  .user-bar button{
+    flex:none; background:transparent; border:1px solid var(--line); color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; padding:6px 10px;
+    border-radius:7px; cursor:pointer;
+  }
+  .user-bar button:hover{background:var(--blue-soft); color:var(--blue);}
+
+  /* ---------------- PAINEL DE LIDERANÇAS ---------------- */
+  .lider-card{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px;}
+  .lider-card .li-info{flex:1; min-width:0;}
+  .lider-card .li-nome{font-weight:600; font-size:13px;}
+  .lider-card .li-email{font-size:11px; color:var(--ink-soft);}
+  .lider-card select{font-size:12px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; margin-right:4px;}
+
+  /* ---------------- CAMPANHA (apoiadores / material) ---------------- */
+  .camp-tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .camp-stats{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+  .camp-stats .stat-box{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px;}
+  .camp-stats .stat-box .n{font-family:'IBM Plex Sans',sans-serif; font-weight:800; font-size:20px; color:var(--navy);}
+  .camp-stats .stat-box .l{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .ap-card, .mat-card{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px;}
+  .ap-card .ap-top, .mat-card .mat-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .ap-card .ap-nome{font-weight:600; font-size:13.5px;}
+  .ap-card .ap-meta, .mat-card .mat-meta{font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.5;}
+  .ap-card .ap-actions, .mat-card .mat-actions{display:flex; gap:6px; flex:none;}
+  .ap-card .ap-actions button, .mat-card .mat-actions button{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; border:1px solid var(--line); background:#fff;
+    padding:4px 7px; border-radius:6px; cursor:pointer; color:var(--ink-soft);
+  }
+  .mat-card .mat-tipo{font-weight:700; font-size:13.5px; color:var(--navy);}
+  .mat-bar{height:6px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px;}
+  .mat-bar .fill{height:100%; background:var(--blue);}
+
   /* ---------------- BOTTOM TABS ---------------- */
   .bottom-tabs{
     position:fixed; left:50%; bottom:0; transform:translateX(-50%);
     width:100%; max-width:var(--app-max-width);
-    display:grid; grid-template-columns:repeat(4,1fr);
+    display:grid; grid-template-columns:repeat(5,1fr);
     padding:10px 4px calc(10px + env(safe-area-inset-bottom)) 4px;
     background:#fff; border-top:1px solid rgba(0,0,0,.08);
     box-shadow:0 -6px 18px rgba(18,36,74,0.06);
     z-index:1000;
   }
   .tab-btn{
-    background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px;
-    color:var(--tab-inactive); font-family:'IBM Plex Sans', sans-serif; font-weight:500; font-size:10.5px; cursor:pointer; padding:6px 2px;
+    background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:2px;
+    color:var(--tab-inactive); font-family:'IBM Plex Sans', sans-serif; font-weight:500; font-size:9.5px; cursor:pointer; padding:6px 1px;
   }
   .tab-btn.active{color:var(--blue); font-weight:700;}
-  .tab-btn svg{flex:none;}
+  .tab-btn svg{flex:none; width:18px; height:18px;}
 
   .view{display:none;}
   .view.active{display:block;}
@@ -234,6 +307,14 @@
     border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); margin-bottom:8px;
   }
   .form-registro textarea{min-height:52px; resize:vertical;}
+  .local-wrap{position:relative; display:block; margin-bottom:8px;}
+  .local-wrap input{padding-right:70px; margin-bottom:0;}
+  .local-buttons{position:absolute; right:6px; top:50%; transform:translateY(-50%); display:flex; gap:4px;}
+  .local-buttons button{
+    width:26px; height:26px; border:none; background:var(--blue-soft); color:var(--blue);
+    border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .local-buttons button:hover{background:var(--blue-highlight, #DCE9FF);}
   .form-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
   .btn-primary{background:var(--blue); color:#fff; border:none; font-family:'IBM Plex Sans', sans-serif; font-weight:600; font-size:13px; padding:10px 18px; border-radius:8px; cursor:pointer;}
   .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink-soft); font-family:'IBM Plex Sans', sans-serif; font-size:13px; padding:10px 14px; border-radius:8px; cursor:pointer;}
@@ -262,7 +343,36 @@
 </head>
 <body>
 
-<div class="shell">
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="app-icon" style="background:var(--blue-mid); width:52px; height:52px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 9L5.5 4h13L20 9" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 9c0 1.4 1.1 2.5 2.4 2.5S8.8 10.4 8.8 9c0 1.4 1.2 2.5 2.6 2.5S14 10.4 14 9c0 1.4 1.2 2.5 2.6 2.5S19.2 10.4 19.2 9" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 11.5V20h14v-8.5" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.5 20v-5a2.5 2.5 0 0 1 5 0v5" stroke="#fff" stroke-width="1.6"/></svg>
+    </div>
+    <h2 id="authTitle">Entrar</h2>
+    <p class="sub">Calendário de Feiras Livres — Vale do Paraíba</p>
+
+    <input id="authNome" placeholder="Seu nome" style="display:none;">
+    <input id="authEmail" type="email" placeholder="E-mail" autocomplete="username">
+    <input id="authSenha" type="password" placeholder="Senha" autocomplete="current-password">
+    <button class="btn-primary" id="btnAuthSubmit">Entrar</button>
+    <div class="auth-msg" id="authMsg"></div>
+    <div class="auth-toggle" id="authToggle">Não tem conta? <a id="authToggleLink">Criar conta</a></div>
+  </div>
+</div>
+
+<div class="auth-screen" id="pendingScreen" style="display:none;">
+  <div class="auth-card" style="text-align:center;">
+    <div class="app-icon" style="background:var(--amber); width:52px; height:52px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.8"/><path d="M12 7v5l3.5 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
+    <h2>Aguardando aprovação</h2>
+    <p class="sub" id="pendingMsg">Sua conta foi criada, mas ainda precisa ser liberada pelo coordenador da campanha. Assim que ele aprovar, você já pode entrar normalmente.</p>
+    <button class="btn-primary" id="btnPendingRefresh">Já fui aprovado, verificar de novo</button>
+    <button class="btn-ghost" id="btnPendingSair" style="width:100%; margin-top:8px;">Sair</button>
+  </div>
+</div>
+
+<div class="shell" id="appShell" style="display:none;">
 
   <header class="app-header">
     <div class="header-row">
@@ -302,6 +412,17 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 20V11M12 20V4M19 20v-7" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
       Relatório da agenda
     </button>
+  </div>
+
+  <div class="user-bar" id="userBar">
+    <div class="who">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="info">
+        <div class="nm" id="userNome">—</div>
+        <div class="rl" id="userPapel">—</div>
+      </div>
+    </div>
+    <button id="btnSair">Sair</button>
   </div>
 
   <main>
@@ -354,7 +475,71 @@
       <div class="empty-note-sm" id="reportFilterNote" style="margin-bottom:10px;"></div>
       <div id="reportBody"><div class="loading-txt">Selecione um período acima.</div></div>
       <button class="btn-print" id="printReportBtn">Imprimir relatório</button>
-      <button class="btn-print" id="btnLimparTudo" style="background:#fff; color:#B3261E; border:1px solid #F1B4AE; margin-top:18px;">Apagar todos os registros salvos</button>
+      <button class="btn-print" id="btnMeusRegistros" style="background:#fff; color:#B3261E; border:1px solid #F1B4AE; margin-top:18px;">Apagar meus registros salvos</button>
+
+      <div id="painelLiderancas" style="display:none; margin-top:26px;">
+        <div class="section-head"><h3>Gerenciar lideranças</h3></div>
+        <p class="empty-note-sm" style="margin-bottom:12px;">Defina o papel e a região de cada pessoa que já criou conta no app. Quem tem papel "Liderança" só vê os registros da própria região + os marcados como "Geral".</p>
+        <div id="liderancasList"><div class="loading-txt">Carregando…</div></div>
+      </div>
+    </section>
+
+    <section id="view-campanha" class="view">
+      <div class="section-head"><h3>Campanha</h3></div>
+      <div class="rep-presets">
+        <button data-camp="apoiadores" class="camp-tab active">Apoiadores</button>
+        <button data-camp="materiais" class="camp-tab">Material</button>
+      </div>
+
+      <!-- ===== APOIADORES ===== -->
+      <div id="campApoiadores">
+        <div class="camp-stats" id="apoiadoresStats"></div>
+        <div class="section-head" style="margin-top:14px;">
+          <h3 style="font-size:15px;">Cadastrar apoiador</h3>
+        </div>
+        <select id="apRegiao" style="margin-bottom:8px;"></select>
+        <input id="apNome" placeholder="Nome completo">
+        <div class="frow">
+          <input id="apTelefone" placeholder="Telefone / WhatsApp">
+          <input id="apBairro" placeholder="Bairro">
+        </div>
+        <input id="apCidade" placeholder="Cidade">
+        <textarea id="apObs" placeholder="Observações"></textarea>
+        <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-soft); margin:4px 0 12px 0;">
+          <input type="checkbox" id="apConsentimento" style="width:auto; margin:0;">
+          A pessoa autorizou ser contatada sobre a campanha
+        </label>
+        <div class="form-actions">
+          <button class="btn-primary" id="btnSalvarApoiador">Salvar apoiador</button>
+          <button class="btn-ghost" id="btnCancelApoiador" style="display:none;">Cancelar</button>
+          <span class="form-msg" id="apMsg"></span>
+        </div>
+
+        <div class="section-head" style="margin-top:22px;"><h3 style="font-size:15px;">Lista de apoiadores</h3></div>
+        <div id="apoiadoresList"><div class="loading-txt">Carregando…</div></div>
+      </div>
+
+      <!-- ===== MATERIAIS ===== -->
+      <div id="campMateriais" style="display:none;">
+        <div class="camp-stats" id="materiaisStats"></div>
+        <div class="section-head" style="margin-top:14px;"><h3 style="font-size:15px;">Registrar material</h3></div>
+        <select id="matRegiao" style="margin-bottom:8px;"></select>
+        <input id="matTipo" placeholder="Tipo de material (ex: Santinho, Adesivo, Camiseta)">
+        <div class="frow">
+          <input id="matRecebida" type="number" min="0" placeholder="Qtd. recebida">
+          <input id="matDistribuida" type="number" min="0" placeholder="Qtd. distribuída">
+        </div>
+        <input id="matData" type="date" placeholder="Data de recebimento">
+        <textarea id="matObs" placeholder="Observações"></textarea>
+        <div class="form-actions">
+          <button class="btn-primary" id="btnSalvarMaterial">Salvar material</button>
+          <button class="btn-ghost" id="btnCancelMaterial" style="display:none;">Cancelar</button>
+          <span class="form-msg" id="matMsg"></span>
+        </div>
+
+        <div class="section-head" style="margin-top:22px;"><h3 style="font-size:15px;">Lista de material</h3></div>
+        <div id="materiaisList"><div class="loading-txt">Carregando…</div></div>
+      </div>
     </section>
 
   </main>
@@ -375,6 +560,10 @@
     <button class="tab-btn" data-view="relatorios">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 20V11M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
       Relatórios
+    </button>
+    <button class="tab-btn" data-view="campanha">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="17" cy="8" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 14.3c2.6.3 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      Campanha
     </button>
   </nav>
 </div>
@@ -433,7 +622,18 @@
           <input id="fHorario" placeholder="Horário (ex: 14h30)">
           <input id="fPessoa" placeholder="Com quem (nome)">
         </div>
-        <input id="fLocal" placeholder="Local">
+        <div class="local-wrap">
+          <input id="fLocal" placeholder="Local">
+          <div class="local-buttons">
+            <button type="button" id="btnMapsLocal" title="Abrir no Google Maps" aria-label="Abrir no Google Maps">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 22s7-7.2 7-12.5A7 7 0 0 0 5 9.5C5 14.8 12 22 12 22Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.8"/></svg>
+            </button>
+            <button type="button" id="btnWazeLocal" title="Abrir no Waze" aria-label="Abrir no Waze">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 11l17-7-7 17-2-7-8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <select id="fRegiaoResp" style="margin-bottom:8px;"></select>
         <input id="fEmail" type="email" multiple placeholder="E-mails dos convidados — separe vários por vírgula (todos recebem convite no Google Agenda)">
         <textarea id="fObs" placeholder="Observações"></textarea>
         <div class="form-actions">
@@ -455,6 +655,15 @@
 <div id="printArea"></div>
 
 <script>
+// ---------- Supabase ----------
+const SUPABASE_URL = 'https://ediqugoceqvesbouaegn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkaXF1Z29jZXF2ZXNib3VhZWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MjI5NTQsImV4cCI6MjEwMjE5ODk1NH0.n1sx7kCt42vSMwkKY5CbUbBgnzAXjjJeu5bqq1cNwp0';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;   // { id, email }
+let currentPerfil = null; // { id, nome, papel, regiao }
+let authMode = 'login';   // 'login' | 'signup'
+
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MESES_ABR = ["JAN","FEV","MAR","ABR","MAI","JUN","JUL","AGO","SET","OUT","NOV","DEZ"];
 const WEEKDAY_NAMES = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
@@ -700,69 +909,76 @@ let selFeiraIdx = "";
 let selectedDate = new Date(hoje);
 let currentDayRegs = [];
 let editingId = null;
-let storageWarned = false;
 
-// Fallback em memória: usado só se o navegador bloquear localStorage (ex.: modo privado).
-// Os dados continuam disponíveis durante a sessão, mas não persistem após fechar a aba.
-const memStore = {};
-
-function dayKey(y,m,d){ return `evt:${y}-${m}-${d}`; }
-function lsAvailable(){
-  try{ const t='__lstest__'; localStorage.setItem(t,'1'); localStorage.removeItem(t); return true; }
-  catch(e){ return false; }
+// ---------- armazenamento (Supabase — compartilhado entre coordenador e lideranças) ----------
+function isoDate(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function dateObjToISO(dateObj){ return isoDate(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()); }
+function rowToEntry(row){
+  return {
+    id: row.id, tipo: row.tipo, cidade: row.cidade, titulo: row.titulo,
+    horario: row.horario, pessoa: row.pessoa, local: row.local, email: row.email,
+    obs: row.obs, regiao: row.regiao, criado_por: row.criado_por
+  };
 }
 async function loadDayRegs(y,m,d){
-  const key = dayKey(y,m,d);
-  if(!lsAvailable()){ return memStore[key] ? JSON.parse(JSON.stringify(memStore[key])) : []; }
-  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : []; }
-  catch(e){ return memStore[key] ? JSON.parse(JSON.stringify(memStore[key])) : []; }
-}
-async function saveDayRegs(y,m,d,list){
-  const key = dayKey(y,m,d);
-  if(!lsAvailable()){
-    memStore[key] = list;
-    if(!storageWarned){ storageWarned = true; console.warn('localStorage indisponível — usando memória apenas para esta sessão.'); }
-    return true;
-  }
-  try{ localStorage.setItem(key, JSON.stringify(list)); return true; }
-  catch(e){
-    console.error('Falha ao salvar no localStorage:', e);
-    memStore[key] = list;
-    return true;
-  }
-}
-function regCountForDay(y,m,d){
-  const key = dayKey(y,m,d);
-  if(!lsAvailable()){ return memStore[key] ? memStore[key].length : 0; }
-  try{ const v = localStorage.getItem(key); if(!v) return 0; const arr=JSON.parse(v); return Array.isArray(arr)?arr.length:0; }
-  catch(e){ return memStore[key] ? memStore[key].length : 0; }
-}
-function getDayRegsSync(y,m,d){
-  const key = dayKey(y,m,d);
-  if(!lsAvailable()){ return memStore[key] || []; }
-  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : (memStore[key]||[]); }
-  catch(e){ return memStore[key] || []; }
+  const dateStr = isoDate(y,m,d);
+  const {data, error} = await sb.from('registros').select('*').eq('data', dateStr).order('criado_em');
+  if(error){ console.error('Erro ao carregar registros:', error); return []; }
+  return (data||[]).map(rowToEntry);
 }
 async function loadRegsForRange(start,end){
-  const regsByDay = {};
-  const useLs = lsAvailable();
-  const months = new Set();
-  eachDate(start,end).forEach(d=>months.add(`${d.getFullYear()}-${d.getMonth()}`));
-  if(useLs){
-    months.forEach(key=>{
-      const prefix = `evt:${key}-`;
-      for(let i=0;i<localStorage.length;i++){
-        const k = localStorage.key(i);
-        if(k && k.indexOf(prefix)===0){
-          try{ const v = localStorage.getItem(k); if(v) regsByDay[k.replace('evt:','')] = JSON.parse(v); }catch(e){}
-        }
-      }
-    });
-  }
-  Object.keys(memStore).forEach(k=>{
-    if(memStore[k] && memStore[k].length){ regsByDay[k.replace('evt:','')] = memStore[k]; }
+  const s = dateObjToISO(start), e = dateObjToISO(end);
+  const {data, error} = await sb.from('registros').select('*').gte('data', s).lte('data', e).order('criado_em');
+  if(error){ console.error('Erro ao carregar período:', error); return {}; }
+  const map = {};
+  (data||[]).forEach(row=>{
+    const [yy,mm,dd] = row.data.split('-').map(Number);
+    const key = `${yy}-${mm-1}-${dd}`;
+    if(!map[key]) map[key] = [];
+    map[key].push(rowToEntry(row));
   });
-  return regsByDay;
+  return map;
+}
+let monthCache = {}; // { 'd': [entries] } — válido apenas para viewYear/viewMonth atuais
+async function refreshMonthCache(){
+  const start = new Date(viewYear, viewMonth, 1);
+  const end = new Date(viewYear, viewMonth+1, 0);
+  const map = await loadRegsForRange(start, end);
+  monthCache = {};
+  Object.keys(map).forEach(key=>{
+    const d = key.split('-')[2];
+    monthCache[d] = map[key];
+  });
+}
+function getDayRegsSync(y,m,d){
+  if(y!==viewYear || m!==viewMonth) return [];
+  return monthCache[String(d)] || [];
+}
+async function inserirRegistro(entry){
+  const payload = {
+    data: entry.data, tipo: entry.tipo, cidade: entry.cidade||null, titulo: entry.titulo,
+    horario: entry.horario||null, pessoa: entry.pessoa||null, local: entry.local||null,
+    email: entry.email||null, obs: entry.obs||null, regiao: entry.regiao||null,
+    criado_por: currentUser ? currentUser.id : null,
+  };
+  const {error} = await sb.from('registros').insert(payload);
+  if(error){ console.error('Erro ao inserir:', error); return false; }
+  return true;
+}
+async function atualizarRegistro(id, entry){
+  const payload = {
+    tipo: entry.tipo, cidade: entry.cidade||null, titulo: entry.titulo,
+    horario: entry.horario||null, pessoa: entry.pessoa||null, local: entry.local||null,
+    email: entry.email||null, obs: entry.obs||null, regiao: entry.regiao||null,
+  };
+  const {error} = await sb.from('registros').update(payload).eq('id', id);
+  if(error){ console.error('Erro ao atualizar:', error); return false; }
+  return true;
+}
+async function excluirRegistro(id){
+  const {error} = await sb.from('registros').delete().eq('id', id);
+  if(error){ console.error('Erro ao excluir:', error); return false; }
+  return true;
 }
 
 function weekdayNameFromDate(date){ return WEEKDAY_NAMES[date.getDay()]; }
@@ -921,7 +1137,8 @@ function popFeira(){
   selFeiraIdx = ""; sel.value = "";
 }
 
-function buildCalendar(){
+async function buildCalendar(){
+  await refreshMonthCache();
   document.getElementById('monthLabel').innerHTML = `${MESES[viewMonth]} <span class="yr" id="yearLabel">${viewYear}</span>`;
   const grid = document.getElementById('calGrid');
   grid.innerHTML = "";
@@ -1127,24 +1344,18 @@ async function renderAgendaFull(){
   });
 }
 
-function countAgendamentosPorCidade(){
+async function countAgendamentosPorCidade(){
   const counts = {};
   CIDADES.forEach(c=>counts[c]=0);
-  const scanArr = (arr)=>{ if(Array.isArray(arr)){ arr.forEach(r=>{ if(r && r.cidade && counts.hasOwnProperty(r.cidade)){ counts[r.cidade]++; } }); } };
-  if(lsAvailable()){
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.indexOf('evt:')===0){
-        try{ const v = localStorage.getItem(k); if(v){ scanArr(JSON.parse(v)); } }catch(e){}
-      }
-    }
-  }
-  Object.keys(memStore).forEach(k=>{ if(k.indexOf('evt:')===0){ scanArr(memStore[k]); } });
+  const {data, error} = await sb.from('registros').select('cidade');
+  if(error){ console.error('Erro ao contar por cidade:', error); return counts; }
+  (data||[]).forEach(r=>{ if(r.cidade && counts.hasOwnProperty(r.cidade)){ counts[r.cidade]++; } });
   return counts;
 }
-function renderCidades(){
+async function renderCidades(){
   const list = document.getElementById('cidadesList');
-  const counts = countAgendamentosPorCidade();
+  list.innerHTML = `<div class="loading-txt">Carregando…</div>`;
+  const counts = await countAgendamentosPorCidade();
   list.innerHTML = CIDADES.map(c=>{
     const hex = corHex[c];
     const n = counts[c]||0;
@@ -1239,6 +1450,8 @@ async function refreshRegistros(){
         </div>
         <div class="rc-actions">
           <a ${gcalTriggerAttrs(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '), r.email||'')} class="gcal-link gcal-trigger">Agenda</a>
+          ${r.local ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(r.local)}&travelmode=driving" target="_blank" rel="noopener" class="gcal-link">Maps</a>` : ""}
+          ${r.local ? `<a href="https://waze.com/ul?q=${encodeURIComponent(r.local)}&navigate=yes" target="_blank" rel="noopener" class="gcal-link">Waze</a>` : ""}
           <button class="edit-reg">Editar</button>
           <button class="del-reg">Excluir</button>
         </div>
@@ -1262,6 +1475,8 @@ async function refreshRegistros(){
         document.getElementById('fCidadeCustom').value = "";
       }
       document.getElementById('fBuscaLocal').value = "";
+      popFRegiaoResp();
+      document.getElementById('fRegiaoResp').value = r.regiao || "";
       document.getElementById('fTipo').value = r.tipo;
       toggleFeiraRefSelect();
       document.getElementById('fTitulo').value = r.titulo || "";
@@ -1283,10 +1498,9 @@ async function refreshRegistros(){
       const r = currentDayRegs.find(x=>x.id===id);
       const confirmMsg = r ? `Excluir "${r.titulo}"? Essa ação não pode ser desfeita.` : "Excluir este registro? Essa ação não pode ser desfeita.";
       if(!window.confirm(confirmMsg)) return;
-      const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
-      currentDayRegs = currentDayRegs.filter(x=>x.id!==id);
-      const ok = await saveDayRegs(y,m,d,currentDayRegs);
+      const ok = await excluirRegistro(id);
       if(ok){ await refreshRegistros(); buildCalendar(); renderAgendaDia(); }
+      else { alert("Não foi possível excluir. Talvez você não tenha permissão para apagar esse registro."); }
     });
   });
 }
@@ -1429,6 +1643,17 @@ function getEntryCidade(){
   if(sel === '__custom__'){ return document.getElementById('fCidadeCustom').value.trim(); }
   return sel;
 }
+function popFRegiaoResp(){
+  const sel = document.getElementById('fRegiaoResp');
+  const opcoes = ['<option value="">Visível para: Todos (geral)</option>'];
+  REGIOES_CAMPANHA.forEach(r=> opcoes.push(`<option value="${r}">Só ${r}</option>`));
+  CIDADES.forEach(c=>{ if(!REGIOES_CAMPANHA.includes(c)) opcoes.push(`<option value="${c}">Só ${c}</option>`); });
+  sel.innerHTML = opcoes.join("");
+  // Liderança: já pré-seleciona a própria região por padrão (ela pode trocar se precisar)
+  if(currentPerfil && currentPerfil.papel === 'lideranca' && currentPerfil.regiao){
+    sel.value = currentPerfil.regiao;
+  }
+}
 function resetForm(){
   editingId = null;
   popFCidade();
@@ -1436,6 +1661,7 @@ function resetForm(){
   document.getElementById('fCidadeCustom').style.display = "none";
   document.getElementById('fCidadeCustom').value = "";
   document.getElementById('fBuscaLocal').value = "";
+  popFRegiaoResp();
   document.getElementById('fTipo').value = "feira";
   toggleFeiraRefSelect();
   document.getElementById('fTitulo').value = "";
@@ -1456,7 +1682,7 @@ async function handleSalvar(){
     if(!titulo){ msg.textContent = "Dê um título ao registro."; msg.className = "form-msg err"; return; }
     if(!selectedDate){ msg.textContent = "Selecione um dia no calendário primeiro."; msg.className = "form-msg err"; return; }
     const entry = {
-      id: editingId || ('r'+Date.now()+Math.random().toString(36).slice(2,7)),
+      data: dateObjToISO(selectedDate),
       tipo: document.getElementById('fTipo').value,
       cidade: getEntryCidade(),
       titulo,
@@ -1465,19 +1691,17 @@ async function handleSalvar(){
       local: document.getElementById('fLocal').value.trim(),
       email: document.getElementById('fEmail').value.trim(),
       obs: document.getElementById('fObs').value.trim(),
+      regiao: document.getElementById('fRegiaoResp').value || null,
     };
-    const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
-    if(editingId){ currentDayRegs = currentDayRegs.map(r=> r.id===editingId ? entry : r); }
-    else { currentDayRegs = [...currentDayRegs, entry]; }
     msg.textContent = "Salvando…"; msg.className = "form-msg";
-    const ok = await saveDayRegs(y,m,d,currentDayRegs);
+    const ok = editingId ? await atualizarRegistro(editingId, entry) : await inserirRegistro(entry);
     if(ok){
       msg.textContent = "Registro salvo."; msg.className = "form-msg ok";
       await refreshRegistros();
       buildCalendar(); renderAgendaDia();
       resetForm();
     } else {
-      msg.textContent = "Não foi possível salvar."; msg.className = "form-msg err";
+      msg.textContent = "Não foi possível salvar. Verifique se você tem permissão para essa região."; msg.className = "form-msg err";
     }
   }catch(err){
     console.error('Erro ao salvar registro:', err);
@@ -1614,6 +1838,96 @@ function switchView(view){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view));
   if(view==='agenda') renderAgendaFull();
   if(view==='cidades') renderCidades();
+  if(view==='relatorios' && currentPerfil && currentPerfil.papel==='coordenador'){ renderLiderancas(); }
+  if(view==='campanha'){ popRegiaoSelects(); renderApoiadores(); }
+}
+
+async function renderLiderancas(){
+  const list = document.getElementById('liderancasList');
+  list.innerHTML = `<div class="loading-txt">Carregando…</div>`;
+  const {data, error} = await sb.from('perfis').select('*').order('nome');
+  if(error){ list.innerHTML = `<div class="empty-note">Erro ao carregar: ${error.message}</div>`; return; }
+  if(!data || !data.length){ list.innerHTML = `<div class="empty-note">Nenhuma pessoa cadastrada ainda.</div>`; return; }
+
+  const regiaoOpcoes = ['<option value="">Sem região</option>']
+    .concat(REGIOES_CAMPANHA.map(r=>`<option value="${r}">${r}</option>`))
+    .concat(CIDADES.filter(c=>!REGIOES_CAMPANHA.includes(c)).map(c=>`<option value="${c}">${c}</option>`))
+    .join("");
+
+  const pendentes = data.filter(p=>!p.aprovado);
+  const aprovados = data.filter(p=>p.aprovado);
+
+  let html = "";
+  if(pendentes.length){
+    html += `<h4 style="color:var(--amber); margin:0 0 10px 0; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;">⏳ Aguardando aprovação (${pendentes.length})</h4>`;
+    html += pendentes.map(p=>`
+      <div class="lider-card" data-id="${p.id}" style="border-color:var(--amber); background:#FFFBF4;">
+        <div class="li-info">
+          <div class="li-nome">${p.nome}</div>
+          <div class="li-email">Pediu acesso — ainda sem papel definido</div>
+        </div>
+        <select class="sel-regiao-pend">${regiaoOpcoes}</select>
+        <button class="btn-aprovar">Aprovar</button>
+      </div>
+    `).join("");
+  }
+  html += `<h4 style="margin:${pendentes.length?'18px':'0'} 0 10px 0; font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; color:var(--ink-soft);">Pessoas com acesso (${aprovados.length})</h4>`;
+  html += aprovados.map(p=>`
+    <div class="lider-card" data-id="${p.id}">
+      <div class="li-info">
+        <div class="li-nome">${p.nome}${p.id===currentUser.id?' (você)':''}</div>
+        <div class="li-email">${p.papel}${p.regiao? ' · '+p.regiao : ''}</div>
+      </div>
+      <select class="sel-papel">
+        <option value="lideranca" ${p.papel==='lideranca'?'selected':''}>Liderança</option>
+        <option value="coordenador" ${p.papel==='coordenador'?'selected':''}>Coordenador</option>
+      </select>
+      <select class="sel-regiao">${regiaoOpcoes}</select>
+      <button class="btn-salvar-perfil">Salvar</button>
+      <button class="btn-revogar" title="Revogar acesso" style="color:#B3261E;">Revogar</button>
+    </div>
+  `).join("");
+  list.innerHTML = html;
+
+  list.querySelectorAll('.btn-aprovar').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const card = btn.closest('.lider-card');
+      const id = card.dataset.id;
+      const regiao = card.querySelector('.sel-regiao-pend').value || null;
+      const {error: errUp} = await sb.from('perfis').update({ aprovado:true, papel:'lideranca', regiao }).eq('id', id);
+      if(errUp){ alert('Não foi possível aprovar: ' + errUp.message); return; }
+      alert('Acesso liberado!');
+      renderLiderancas();
+    });
+  });
+  list.querySelectorAll('.lider-card').forEach(card=>{
+    const selRegiao = card.querySelector('.sel-regiao');
+    if(!selRegiao) return;
+    const perfil = data.find(p=>p.id===card.dataset.id);
+    if(perfil && perfil.regiao) selRegiao.value = perfil.regiao;
+    card.querySelector('.btn-salvar-perfil').addEventListener('click', async ()=>{
+      const id = card.dataset.id;
+      const novoPapel = card.querySelector('.sel-papel').value;
+      const novaRegiao = card.querySelector('.sel-regiao').value || null;
+      const {error: errUp} = await sb.from('perfis').update({ papel: novoPapel, regiao: novaRegiao }).eq('id', id);
+      if(errUp){ alert('Não foi possível salvar: ' + errUp.message); return; }
+      if(id === currentUser.id){
+        currentPerfil.papel = novoPapel; currentPerfil.regiao = novaRegiao;
+        atualizarUserBar();
+      }
+      alert('Atualizado!');
+    });
+    const btnRev = card.querySelector('.btn-revogar');
+    if(btnRev){
+      btnRev.addEventListener('click', async ()=>{
+        if(card.dataset.id === currentUser.id){ alert('Você não pode revogar o próprio acesso.'); return; }
+        if(!window.confirm('Revogar o acesso dessa pessoa? Ela volta para "aguardando aprovação".')) return;
+        const {error: errUp} = await sb.from('perfis').update({ aprovado:false }).eq('id', card.dataset.id);
+        if(errUp){ alert('Não foi possível revogar: ' + errUp.message); return; }
+        renderLiderancas();
+      });
+    }
+  });
 }
 
 document.getElementById('selCidade').addEventListener('change', e=>{ selCidade=e.target.value; popDia(); popFeira(); buildCalendar(); renderAgendaDia(); });
@@ -1627,6 +1941,16 @@ document.getElementById('btnGoReport').addEventListener('click', ()=> switchView
 document.getElementById('closeDetail').addEventListener('click', closeDayModal);
 document.getElementById('dayModalOverlay').addEventListener('click', e=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
 document.getElementById('fTipo').addEventListener('change', toggleFeiraRefSelect);
+document.getElementById('btnMapsLocal').addEventListener('click', ()=>{
+  const addr = document.getElementById('fLocal').value.trim();
+  if(!addr){ alert('Digite ou escolha um local primeiro.'); return; }
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}&travelmode=driving`, '_blank', 'noopener');
+});
+document.getElementById('btnWazeLocal').addEventListener('click', ()=>{
+  const addr = document.getElementById('fLocal').value.trim();
+  if(!addr){ alert('Digite ou escolha um local primeiro.'); return; }
+  window.open(`https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`, '_blank', 'noopener');
+});
 document.getElementById('fBuscaLocal').addEventListener('input', ()=>{
   const tipo = document.getElementById('fTipo').value;
   if(tipo === 'feira'){ refreshFeiraOptions(); }
@@ -1668,33 +1992,389 @@ document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 document.getElementById('printDayBtn').addEventListener('click', printDayAgenda);
 document.getElementById('printReportBtn').addEventListener('click', printReport);
 
-document.getElementById('btnLimparTudo').addEventListener('click', ()=>{
-  const step1 = window.confirm("Isso vai apagar TODOS os seus registros salvos (reuniões, campanha, visitas etc.) neste navegador. As feiras oficiais não são afetadas. Não pode ser desfeito. Continuar?");
+document.getElementById('btnMeusRegistros').addEventListener('click', async ()=>{
+  if(!currentUser){ return; }
+  const step1 = window.confirm("Isso vai apagar TODOS os registros que VOCÊ cadastrou (não afeta o que outras pessoas cadastraram). Não pode ser desfeito. Continuar?");
   if(!step1) return;
-  const step2 = window.confirm("Tem certeza mesmo? Todos os registros cadastrados serão perdidos permanentemente.");
+  const step2 = window.confirm("Tem certeza mesmo? Seus registros serão perdidos permanentemente.");
   if(!step2) return;
-  try{
-    const toRemove = [];
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(k && k.indexOf('evt:')===0) toRemove.push(k);
-    }
-    toRemove.forEach(k=>localStorage.removeItem(k));
-  }catch(e){ console.error('Erro ao limpar localStorage:', e); }
-  Object.keys(memStore).forEach(k=>delete memStore[k]);
+  const {error} = await sb.from('registros').delete().eq('criado_por', currentUser.id);
+  if(error){ alert("Não foi possível apagar: " + error.message); return; }
   currentReport = {type:null, start:null, end:null, grouped:[]};
   document.getElementById('reportBody').innerHTML = `<div class="loading-txt">Selecione um período acima.</div>`;
   document.querySelectorAll('.rep-presets button').forEach(b=>b.classList.remove('active'));
   buildCalendar();
   renderAgendaDia();
-  alert("Todos os registros foram apagados. Você pode cadastrar tudo do zero.");
+  alert("Seus registros foram apagados.");
 });
 document.querySelectorAll('.rep-presets button').forEach(btn=> btn.addEventListener('click', ()=>buildReport(btn.dataset.range)));
 document.querySelectorAll('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=>switchView(btn.dataset.view)));
 
-popCidade(); popDia(); popFeira();
-buildCalendar();
-renderAgendaDia();
+// ---------- CAMPANHA: apoiadores e material ----------
+let editingApId = null;
+let editingMatId = null;
+
+function opcoesRegiaoCampanha(){
+  const opcoes = ['<option value="">Selecione a região</option>'];
+  REGIOES_CAMPANHA.forEach(r=> opcoes.push(`<option value="${r}">${r}</option>`));
+  CIDADES.forEach(c=>{ if(!REGIOES_CAMPANHA.includes(c)) opcoes.push(`<option value="${c}">${c}</option>`); });
+  return opcoes.join("");
+}
+function popRegiaoSelects(){
+  ['apRegiao','matRegiao'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = opcoesRegiaoCampanha();
+    if(currentPerfil && currentPerfil.papel==='lideranca' && currentPerfil.regiao){ sel.value = currentPerfil.regiao; }
+  });
+}
+
+document.querySelectorAll('.camp-tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.camp-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.camp;
+    document.getElementById('campApoiadores').style.display = tab==='apoiadores' ? 'block' : 'none';
+    document.getElementById('campMateriais').style.display = tab==='materiais' ? 'block' : 'none';
+    if(tab==='materiais') renderMateriais();
+    else renderApoiadores();
+  });
+});
+
+// ----- APOIADORES -----
+async function renderApoiadores(){
+  const list = document.getElementById('apoiadoresList');
+  list.innerHTML = `<div class="loading-txt">Carregando…</div>`;
+  const {data, error} = await sb.from('apoiadores').select('*').order('criado_em', {ascending:false});
+  if(error){ list.innerHTML = `<div class="empty-note">Erro: ${error.message}</div>`; return; }
+
+  const total = (data||[]).length;
+  const comConsentimento = (data||[]).filter(a=>a.consentimento).length;
+  document.getElementById('apoiadoresStats').innerHTML = `
+    <div class="stat-box"><div class="n">${total}</div><div class="l">Apoiadores cadastrados</div></div>
+    <div class="stat-box"><div class="n">${comConsentimento}</div><div class="l">Autorizaram contato</div></div>
+  `;
+
+  if(!total){ list.innerHTML = `<div class="empty-note">Nenhum apoiador cadastrado ainda.</div>`; return; }
+  list.innerHTML = data.map(a=>`
+    <div class="ap-card" data-id="${a.id}">
+      <div class="ap-top">
+        <div>
+          <div class="ap-nome">${a.nome}</div>
+          <div class="ap-meta">
+            ${a.telefone? `📞 ${a.telefone}<br>`:""}
+            ${a.bairro||a.cidade? `📍 ${[a.bairro,a.cidade].filter(Boolean).join(' — ')}<br>`:""}
+            ${a.regiao? `🏷️ ${a.regiao}<br>`:""}
+            ${a.consentimento? `✅ Autorizou contato<br>`:""}
+            ${a.obs? `📝 ${a.obs}`:""}
+          </div>
+        </div>
+        <div class="ap-actions">
+          <button class="ap-edit">Editar</button>
+          <button class="ap-del">Excluir</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  list.querySelectorAll('.ap-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.ap-card').dataset.id;
+      const a = data.find(x=>x.id===id);
+      if(!a) return;
+      editingApId = id;
+      document.getElementById('apRegiao').value = a.regiao || "";
+      document.getElementById('apNome').value = a.nome || "";
+      document.getElementById('apTelefone').value = a.telefone || "";
+      document.getElementById('apBairro').value = a.bairro || "";
+      document.getElementById('apCidade').value = a.cidade || "";
+      document.getElementById('apObs').value = a.obs || "";
+      document.getElementById('apConsentimento').checked = !!a.consentimento;
+      document.getElementById('btnSalvarApoiador').textContent = "Salvar alteração";
+      document.getElementById('btnCancelApoiador').style.display = "inline-block";
+      document.getElementById('apNome').scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+  list.querySelectorAll('.ap-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.closest('.ap-card').dataset.id;
+      const a = data.find(x=>x.id===id);
+      if(!window.confirm(`Excluir "${a?.nome||'este apoiador'}"? Não pode ser desfeito.`)) return;
+      const {error:errDel} = await sb.from('apoiadores').delete().eq('id', id);
+      if(errDel){ alert('Não foi possível excluir: ' + errDel.message); return; }
+      renderApoiadores();
+    });
+  });
+}
+function resetApForm(){
+  editingApId = null;
+  document.getElementById('apRegiao').value = currentPerfil && currentPerfil.regiao ? currentPerfil.regiao : "";
+  document.getElementById('apNome').value = "";
+  document.getElementById('apTelefone').value = "";
+  document.getElementById('apBairro').value = "";
+  document.getElementById('apCidade').value = "";
+  document.getElementById('apObs').value = "";
+  document.getElementById('apConsentimento').checked = false;
+  document.getElementById('btnSalvarApoiador').textContent = "Salvar apoiador";
+  document.getElementById('btnCancelApoiador').style.display = "none";
+  document.getElementById('apMsg').textContent = "";
+}
+document.getElementById('btnSalvarApoiador').addEventListener('click', async ()=>{
+  const msg = document.getElementById('apMsg');
+  const nome = document.getElementById('apNome').value.trim();
+  if(!nome){ msg.textContent = "Digite o nome."; msg.className = "form-msg err"; return; }
+  const payload = {
+    nome,
+    telefone: document.getElementById('apTelefone').value.trim() || null,
+    bairro: document.getElementById('apBairro').value.trim() || null,
+    cidade: document.getElementById('apCidade').value.trim() || null,
+    regiao: document.getElementById('apRegiao').value || null,
+    consentimento: document.getElementById('apConsentimento').checked,
+    obs: document.getElementById('apObs').value.trim() || null,
+  };
+  msg.textContent = "Salvando…"; msg.className = "form-msg";
+  let error;
+  if(editingApId){
+    ({error} = await sb.from('apoiadores').update(payload).eq('id', editingApId));
+  } else {
+    payload.cadastrado_por = currentUser.id;
+    ({error} = await sb.from('apoiadores').insert(payload));
+  }
+  if(error){ msg.textContent = "Não foi possível salvar: " + error.message; msg.className = "form-msg err"; return; }
+  msg.textContent = "Salvo!"; msg.className = "form-msg ok";
+  resetApForm();
+  renderApoiadores();
+});
+document.getElementById('btnCancelApoiador').addEventListener('click', resetApForm);
+
+// ----- MATERIAL DE CAMPANHA -----
+async function renderMateriais(){
+  const list = document.getElementById('materiaisList');
+  list.innerHTML = `<div class="loading-txt">Carregando…</div>`;
+  const {data, error} = await sb.from('materiais').select('*').order('criado_em', {ascending:false});
+  if(error){ list.innerHTML = `<div class="empty-note">Erro: ${error.message}</div>`; return; }
+
+  const totalRecebida = (data||[]).reduce((s,m)=>s+(m.quantidade_recebida||0),0);
+  const totalDistribuida = (data||[]).reduce((s,m)=>s+(m.quantidade_distribuida||0),0);
+  document.getElementById('materiaisStats').innerHTML = `
+    <div class="stat-box"><div class="n">${totalRecebida}</div><div class="l">Total recebido</div></div>
+    <div class="stat-box"><div class="n">${totalDistribuida}</div><div class="l">Total distribuído</div></div>
+  `;
+
+  if(!(data||[]).length){ list.innerHTML = `<div class="empty-note">Nenhum material registrado ainda.</div>`; return; }
+  list.innerHTML = data.map(m=>{
+    const pct = m.quantidade_recebida>0 ? Math.min(100, Math.round(100*m.quantidade_distribuida/m.quantidade_recebida)) : 0;
+    return `
+    <div class="mat-card" data-id="${m.id}">
+      <div class="mat-top">
+        <div style="flex:1;">
+          <div class="mat-tipo">${m.tipo}</div>
+          <div class="mat-meta">
+            ${m.regiao? `🏷️ ${m.regiao}<br>`:""}
+            📦 ${m.quantidade_recebida||0} recebido(s) · ${m.quantidade_distribuida||0} distribuído(s)
+            ${m.data_recebimento? `<br>📅 ${m.data_recebimento.split('-').reverse().join('/')}`:""}
+            ${m.obs? `<br>📝 ${m.obs}`:""}
+          </div>
+          <div class="mat-bar"><div class="fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="mat-actions">
+          <button class="mat-edit">Editar</button>
+          <button class="mat-del">Excluir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll('.mat-edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.closest('.mat-card').dataset.id;
+      const m = data.find(x=>x.id===id);
+      if(!m) return;
+      editingMatId = id;
+      document.getElementById('matRegiao').value = m.regiao || "";
+      document.getElementById('matTipo').value = m.tipo || "";
+      document.getElementById('matRecebida').value = m.quantidade_recebida || 0;
+      document.getElementById('matDistribuida').value = m.quantidade_distribuida || 0;
+      document.getElementById('matData').value = m.data_recebimento || "";
+      document.getElementById('matObs').value = m.obs || "";
+      document.getElementById('btnSalvarMaterial').textContent = "Salvar alteração";
+      document.getElementById('btnCancelMaterial').style.display = "inline-block";
+      document.getElementById('matTipo').scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+  list.querySelectorAll('.mat-del').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.closest('.mat-card').dataset.id;
+      const m = data.find(x=>x.id===id);
+      if(!window.confirm(`Excluir "${m?.tipo||'este material'}"? Não pode ser desfeito.`)) return;
+      const {error:errDel} = await sb.from('materiais').delete().eq('id', id);
+      if(errDel){ alert('Não foi possível excluir: ' + errDel.message); return; }
+      renderMateriais();
+    });
+  });
+}
+function resetMatForm(){
+  editingMatId = null;
+  document.getElementById('matRegiao').value = currentPerfil && currentPerfil.regiao ? currentPerfil.regiao : "";
+  document.getElementById('matTipo').value = "";
+  document.getElementById('matRecebida').value = "";
+  document.getElementById('matDistribuida').value = "";
+  document.getElementById('matData').value = "";
+  document.getElementById('matObs').value = "";
+  document.getElementById('btnSalvarMaterial').textContent = "Salvar material";
+  document.getElementById('btnCancelMaterial').style.display = "none";
+  document.getElementById('matMsg').textContent = "";
+}
+document.getElementById('btnSalvarMaterial').addEventListener('click', async ()=>{
+  const msg = document.getElementById('matMsg');
+  const tipo = document.getElementById('matTipo').value.trim();
+  if(!tipo){ msg.textContent = "Digite o tipo de material."; msg.className = "form-msg err"; return; }
+  const payload = {
+    tipo,
+    quantidade_recebida: parseInt(document.getElementById('matRecebida').value) || 0,
+    quantidade_distribuida: parseInt(document.getElementById('matDistribuida').value) || 0,
+    regiao: document.getElementById('matRegiao').value || null,
+    data_recebimento: document.getElementById('matData').value || null,
+    obs: document.getElementById('matObs').value.trim() || null,
+  };
+  msg.textContent = "Salvando…"; msg.className = "form-msg";
+  let error;
+  if(editingMatId){
+    ({error} = await sb.from('materiais').update(payload).eq('id', editingMatId));
+  } else {
+    payload.criado_por = currentUser.id;
+    ({error} = await sb.from('materiais').insert(payload));
+  }
+  if(error){ msg.textContent = "Não foi possível salvar: " + error.message; msg.className = "form-msg err"; return; }
+  msg.textContent = "Salvo!"; msg.className = "form-msg ok";
+  resetMatForm();
+  renderMateriais();
+});
+document.getElementById('btnCancelMaterial').addEventListener('click', resetMatForm);
+
+// ---------- AUTENTICAÇÃO ----------
+function avatarIniciais(nome){
+  if(!nome) return '?';
+  const partes = nome.trim().split(/\s+/);
+  return ((partes[0]?.[0]||'') + (partes[1]?.[0]||'')).toUpperCase() || nome[0].toUpperCase();
+}
+async function carregarOuCriarPerfil(user){
+  let {data, error} = await sb.from('perfis').select('*').eq('id', user.id).maybeSingle();
+  if(error){ console.error('Erro ao carregar perfil:', error); }
+  if(!data){
+    const nome = user.user_metadata?.nome || user.email.split('@')[0];
+    const {data: novo, error: errIns} = await sb.from('perfis').insert({ id:user.id, nome, papel:'lideranca' }).select().maybeSingle();
+    if(errIns){ console.error('Erro ao criar perfil:', errIns); }
+    data = novo;
+  }
+  return data;
+}
+function atualizarUserBar(){
+  if(!currentPerfil) return;
+  document.getElementById('userAvatar').textContent = avatarIniciais(currentPerfil.nome);
+  document.getElementById('userNome').textContent = currentPerfil.nome;
+  const papelLabel = currentPerfil.papel === 'coordenador' ? 'Coordenador — vê tudo' : `Liderança${currentPerfil.regiao? ' — '+currentPerfil.regiao : ' — sem região definida'}`;
+  document.getElementById('userPapel').textContent = papelLabel;
+  document.getElementById('painelLiderancas').style.display = currentPerfil.papel === 'coordenador' ? 'block' : 'none';
+}
+async function irParaAppOuEspera(){
+  document.getElementById('authScreen').style.display = 'none';
+  if(currentPerfil && currentPerfil.aprovado){
+    document.getElementById('pendingScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    atualizarUserBar();
+    popCidade(); popDia(); popFeira();
+    await buildCalendar();
+    renderAgendaDia();
+  } else {
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('pendingScreen').style.display = 'flex';
+  }
+}
+async function checarSessao(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(session && session.user){
+    currentUser = { id: session.user.id, email: session.user.email };
+    currentPerfil = await carregarOuCriarPerfil(session.user);
+    await irParaAppOuEspera();
+  }
+}
+document.getElementById('btnPendingRefresh').addEventListener('click', async ()=>{
+  if(!currentUser) return;
+  const {data:{session}} = await sb.auth.getSession();
+  if(session && session.user){ currentPerfil = await carregarOuCriarPerfil(session.user); }
+  await irParaAppOuEspera();
+});
+document.getElementById('btnPendingSair').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  currentUser = null; currentPerfil = null;
+  document.getElementById('pendingScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+});
+function setAuthMode(mode){
+  authMode = mode;
+  const nomeField = document.getElementById('authNome');
+  const title = document.getElementById('authTitle');
+  const submitBtn = document.getElementById('btnAuthSubmit');
+  const toggle = document.getElementById('authToggle');
+  if(mode === 'signup'){
+    nomeField.style.display = 'block';
+    title.textContent = 'Criar conta';
+    submitBtn.textContent = 'Criar conta';
+    toggle.innerHTML = 'Já tem conta? <a id="authToggleLink">Entrar</a>';
+  } else {
+    nomeField.style.display = 'none';
+    title.textContent = 'Entrar';
+    submitBtn.textContent = 'Entrar';
+    toggle.innerHTML = 'Não tem conta? <a id="authToggleLink">Criar conta</a>';
+  }
+  document.getElementById('authToggleLink').addEventListener('click', ()=> setAuthMode(mode==='signup'?'login':'signup'));
+  document.getElementById('authMsg').textContent = '';
+}
+document.getElementById('authToggleLink').addEventListener('click', ()=> setAuthMode('signup'));
+document.getElementById('btnAuthSubmit').addEventListener('click', async ()=>{
+  const msg = document.getElementById('authMsg');
+  const email = document.getElementById('authEmail').value.trim();
+  const senha = document.getElementById('authSenha').value;
+  const nome = document.getElementById('authNome').value.trim();
+  if(!email || !senha){ msg.textContent = 'Preencha e-mail e senha.'; msg.className = 'auth-msg err'; return; }
+  if(authMode === 'signup' && !nome){ msg.textContent = 'Digite seu nome.'; msg.className = 'auth-msg err'; return; }
+  msg.textContent = 'Aguarde…'; msg.className = 'auth-msg';
+  try{
+    if(authMode === 'signup'){
+      const {data, error} = await sb.auth.signUp({ email, password: senha, options:{ data:{ nome } } });
+      if(error){ msg.textContent = error.message; msg.className = 'auth-msg err'; return; }
+      if(!data.session){
+        msg.textContent = 'Conta criada! Se pedir confirmação por e-mail, confira sua caixa de entrada. Senão, já pode entrar.'; msg.className = 'auth-msg ok';
+        setAuthMode('login');
+        return;
+      }
+      currentUser = { id: data.user.id, email: data.user.email };
+      currentPerfil = await carregarOuCriarPerfil(data.user);
+      await irParaAppOuEspera();
+    } else {
+      const {data, error} = await sb.auth.signInWithPassword({ email, password: senha });
+      if(error){ msg.textContent = 'E-mail ou senha incorretos.'; msg.className = 'auth-msg err'; return; }
+      currentUser = { id: data.user.id, email: data.user.email };
+      currentPerfil = await carregarOuCriarPerfil(data.user);
+      await irParaAppOuEspera();
+    }
+  }catch(err){
+    console.error(err);
+    msg.textContent = 'Erro inesperado. Tente novamente.'; msg.className = 'auth-msg err';
+  }
+});
+document.getElementById('btnSair').addEventListener('click', async ()=>{
+  if(!window.confirm('Sair da sua conta?')) return;
+  await sb.auth.signOut();
+  currentUser = null; currentPerfil = null;
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authSenha').value = '';
+});
+
+setAuthMode('login');
+checarSessao();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); });
