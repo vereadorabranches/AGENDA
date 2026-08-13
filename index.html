@@ -390,13 +390,7 @@
       </div>
     </div>
     <div class="modal-body">
-      <h4>Feiras nesse dia (fonte oficial)</h4>
-      <div id="feirasList"></div>
-
-      <h4>Meus registros</h4>
-      <div id="registrosList"><div class="loading-txt">Carregando…</div></div>
-
-      <div class="form-registro">
+      <div class="form-registro" style="border-top:none; padding-top:0; margin-top:0;">
         <h4 style="margin-top:0;" id="formHeading">Cadastro de reunião / registro</h4>
         <div class="frow">
           <select id="fTipo">
@@ -419,7 +413,7 @@
           <input id="fPessoa" placeholder="Com quem (nome)">
         </div>
         <input id="fLocal" placeholder="Local">
-        <input id="fEmail" type="email" placeholder="E-mail do responsável (opcional — recebe convite no Google Agenda)">
+        <input id="fEmail" type="email" multiple placeholder="E-mails dos convidados — separe vários por vírgula (todos recebem convite no Google Agenda)">
         <textarea id="fObs" placeholder="Observações"></textarea>
         <div class="form-actions">
           <button class="btn-primary" id="btnSalvar">Salvar registro</button>
@@ -427,6 +421,12 @@
           <span class="form-msg" id="formMsg"></span>
         </div>
       </div>
+
+      <h4>Meus registros</h4>
+      <div id="registrosList"><div class="loading-txt">Carregando…</div></div>
+
+      <h4>Feiras nesse dia (fonte oficial)</h4>
+      <div id="feirasList"></div>
     </div>
   </div>
 </div>
@@ -1075,27 +1075,42 @@ async function renderAgendaFull(){
   const dateForCard = [];
   dates.forEach(d=>{
     const yy=d.getFullYear(), mm=d.getMonth(), dd=d.getDate();
-    const feiras = feirasForDate(d);
-    const regs = regsByDay[`${yy}-${mm}-${dd}`] || [];
-    if(!feiras.length && !regs.length) return;
-    const items = [];
-    feiras.forEach(e=>{ items.push(renderAgCard(d, e, null)); dateForCard.push(d); });
-    regs.forEach(r=>{ items.push(renderAgCard(d, null, r)); dateForCard.push(d); });
+    let regs = regsByDay[`${yy}-${mm}-${dd}`] || [];
+    if(selCidade){ regs = regs.filter(r=> r.cidade === selCidade); }
+    if(selDia && weekdayNameFromDate(d) !== selDia){ regs = []; }
+    if(!regs.length) return;
+    const items = regs.map(r=>{ dateForCard.push(d); return renderAgCard(d, null, r); });
     blocks.push(`<div class="rep-day-head">${fmtDateLabel(d)}</div>${items.join("")}`);
   });
 
-  list.innerHTML = blocks.length ? blocks.join("") : `<div class="empty-note">Nada encontrado em ${MESES[m].toLowerCase()} com o filtro atual.</div>`;
+  list.innerHTML = blocks.length ? blocks.join("") : `<div class="empty-note">Nenhum registro cadastrado em ${MESES[m].toLowerCase()}${selCidade? " para "+selCidade:""}. Toque em um dia no Calendário e use "+ Novo registro".</div>`;
   list.querySelectorAll('.ag-card').forEach((el,i)=>{
     el.addEventListener('click', ()=>{ const d=dateForCard[i]; if(d) openDay(d); });
   });
 }
 
+function countAgendamentosPorCidade(){
+  const counts = {};
+  CIDADES.forEach(c=>counts[c]=0);
+  const scanArr = (arr)=>{ if(Array.isArray(arr)){ arr.forEach(r=>{ if(r && r.cidade && counts.hasOwnProperty(r.cidade)){ counts[r.cidade]++; } }); } };
+  if(lsAvailable()){
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('evt:')===0){
+        try{ const v = localStorage.getItem(k); if(v){ scanArr(JSON.parse(v)); } }catch(e){}
+      }
+    }
+  }
+  Object.keys(memStore).forEach(k=>{ if(k.indexOf('evt:')===0){ scanArr(memStore[k]); } });
+  return counts;
+}
 function renderCidades(){
   const list = document.getElementById('cidadesList');
+  const counts = countAgendamentosPorCidade();
   list.innerHTML = CIDADES.map(c=>{
     const hex = corHex[c];
-    const count = feirasPorCidade[c].length;
-    const cc = count>0 ? `${count} feira(s) cadastrada(s)` : "Sem dados de feira ainda";
+    const n = counts[c]||0;
+    const cc = n>0 ? `${n} agendamento(s)` : "Nenhum agendamento ainda";
     return `
       <div class="city-card" data-cidade="${c}">
         <div class="city-swatch" style="background:${hex};">${ABREV[c]}</div>
@@ -1111,8 +1126,8 @@ function renderCidades(){
       selCidade = el.dataset.cidade;
       document.getElementById('selCidade').value = selCidade;
       popDia(); popFeira();
-      switchView('calendario');
-      buildCalendar(); renderAgendaDia();
+      switchView('agenda');
+      renderAgendaFull();
     });
   });
 }
@@ -1180,6 +1195,7 @@ async function refreshRegistros(){
             ${r.horario ? `⏰ ${r.horario}<br>`:""}
             ${r.pessoa ? `👤 ${r.pessoa}<br>`:""}
             ${r.local ? `📍 ${r.local}<br>`:""}
+            ${r.email ? `✉️ ${r.email}<br>`:""}
             ${r.obs ? `📝 ${r.obs}`:""}
           </div>
         </div>
@@ -1384,7 +1400,7 @@ function printDayAgenda(){
   const regsHtml = currentDayRegs.length ? currentDayRegs.map(r=>`
     <div class="pa-row"><div class="pa-h">${r.horario||"—"}</div>
       <div class="pa-b"><strong>[${tipoLabel[r.tipo]||"Outro"}] ${r.titulo}</strong>
-      ${r.pessoa?`<span>Com: ${r.pessoa}</span>`:""}${r.local?`<span>Local: ${r.local}</span>`:""}${r.obs?`<span>${r.obs}</span>`:""}</div></div>
+      ${r.pessoa?`<span>Com: ${r.pessoa}</span>`:""}${r.local?`<span>Local: ${r.local}</span>`:""}${r.email?`<span>Convidados: ${r.email}</span>`:""}${r.obs?`<span>${r.obs}</span>`:""}</div></div>
   `).join("") : `<div class="pa-empty">Nenhum registro seu para esse dia.</div>`;
   document.getElementById('printArea').innerHTML = `
     <div class="pa-page">
