@@ -215,6 +215,7 @@
   .feira-item .fi-main strong{color:var(--navy); font-family:'IBM Plex Sans', sans-serif;}
   .feira-item .fi-main span{display:block; color:var(--ink-soft); font-size:11.3px; margin-top:2px;}
   .feira-item button{flex:none; font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase; background:var(--blue-soft); border:1px solid var(--line); color:var(--navy); padding:5px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;}
+  .gcal-link-inline{flex:none; font-family:'IBM Plex Mono', monospace; font-size:10px; text-transform:uppercase; background:#fff; border:1px solid var(--line); color:var(--blue); padding:5px 8px; border-radius:6px; white-space:nowrap;}
   .fi-actions{display:flex; gap:6px; flex:none;}
 
   .reg-card{border:1px solid var(--line); border-left:3px solid var(--amber); border-radius:8px; padding:10px 12px; margin-bottom:10px; background:#FFFBF4;}
@@ -353,6 +354,7 @@
       <div id="reportBody"><div class="loading-txt">Selecione um período acima.</div></div>
       <button class="btn-print" id="btnExportICS" style="background:var(--blue); margin-top:10px;">Exportar para Google Agenda (.ics)</button>
       <button class="btn-print" id="printReportBtn">Imprimir relatório</button>
+      <button class="btn-print" id="btnLimparTudo" style="background:#fff; color:#B3261E; border:1px solid #F1B4AE; margin-top:18px;">Apagar todos os registros salvos</button>
     </section>
 
   </main>
@@ -394,7 +396,7 @@
       <div id="registrosList"><div class="loading-txt">Carregando…</div></div>
 
       <div class="form-registro">
-        <h4 style="margin-top:0;">Cadastro de reunião / registro</h4>
+        <h4 style="margin-top:0;" id="formHeading">Cadastro de reunião / registro</h4>
         <div class="frow">
           <select id="fTipo">
             <option value="feira">Ir à feira</option>
@@ -402,19 +404,21 @@
             <option value="reuniao">Reunião</option>
             <option value="outro">Outro</option>
           </select>
-          <select id="fFeiraRef" style="display:none;"></select>
+          <select id="fCidade"></select>
         </div>
+        <input id="fBuscaLocal" placeholder="Buscar local pelo nome…" style="display:none;">
+        <select id="fFeiraRef" style="display:none; margin-bottom:8px;"></select>
         <div class="frow" id="campanhaRow" style="display:none;">
           <select id="fRegiaoCampanha"></select>
           <select id="fLocalCampanha"></select>
         </div>
-        <select id="fCidade" style="margin-bottom:8px;"></select>
         <input id="fTitulo" placeholder="Título / assunto">
         <div class="frow">
           <input id="fHorario" placeholder="Horário (ex: 14h30)">
           <input id="fPessoa" placeholder="Com quem (nome)">
         </div>
         <input id="fLocal" placeholder="Local">
+        <input id="fEmail" type="email" placeholder="E-mail do responsável (opcional — recebe convite no Google Agenda)">
         <textarea id="fObs" placeholder="Observações"></textarea>
         <div class="form-actions">
           <button class="btn-primary" id="btnSalvar">Salvar registro</button>
@@ -751,7 +755,7 @@ function parseHorario(s){
   }
   return {startH,startM,endH,endM};
 }
-function googleCalendarLink(title, dateObj, horario, location, details){
+function googleCalendarLink(title, dateObj, horario, location, details, email){
   const parsed = parseHorario(horario);
   const y=dateObj.getFullYear(), mo=dateObj.getMonth(), d=dateObj.getDate();
   let datesParam;
@@ -765,10 +769,14 @@ function googleCalendarLink(title, dateObj, horario, location, details){
     const fdB = `${nd.getFullYear()}${pad2(nd.getMonth()+1)}${pad2(nd.getDate())}`;
     datesParam = `${fdA}/${fdB}`;
   }
-  const params = new URLSearchParams({
+  const paramsObj = {
     action:'TEMPLATE', text:title, dates:datesParam,
     details: details||'', location: location||'', ctz:'America/Sao_Paulo'
-  });
+  };
+  const params = new URLSearchParams(paramsObj);
+  if(email){
+    String(email).split(/[,;]/).map(s=>s.trim()).filter(Boolean).forEach(em=> params.append('add', em));
+  }
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 function icsEscape(s){ return String(s||"").replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n'); }
@@ -982,7 +990,7 @@ function renderAgCard(dateObj, feira, reg){
       </div>`;
   }
   const tipoLabel = {feira:"Feira", campanha:"Campanha", reuniao:"Reunião", outro:"Outro"};
-  const gcalReg = googleCalendarLink(reg.titulo, dateObj, reg.horario, reg.local||'', [reg.pessoa?`Com: ${reg.pessoa}`:'', reg.obs||''].filter(Boolean).join(' — '));
+  const gcalReg = googleCalendarLink(reg.titulo, dateObj, reg.horario, reg.local||'', [reg.pessoa?`Com: ${reg.pessoa}`:'', reg.obs||''].filter(Boolean).join(' — '), reg.email||'');
   return `
     <div class="ag-card reg">
       <div class="ag-date" style="background:#FFF3E2; color:#B5680B;"><span class="dd">${dd}</span><span class="mm">${mm}</span></div>
@@ -1066,7 +1074,7 @@ async function openDay(dateObj){
       <div class="feira-item">
         <div class="fi-main"><strong>${e.cidade}</strong> — ${e.bairro}<span>${e.horario}${e.endereco?" · "+e.endereco:""}</span></div>
         <div class="fi-actions">
-          <a href="${googleCalendarLink(`Feira — ${e.bairro} (${e.cidade})`, dateObj, e.horario, `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`, `Feira livre em ${e.cidade}.`)}" target="_blank" rel="noopener" class="use-feira" style="text-decoration:none; display:inline-block;">Agenda</a>
+          <a href="${googleCalendarLink(`Feira — ${e.bairro} (${e.cidade})`, dateObj, e.horario, `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`, `Feira livre em ${e.cidade}.`)}" target="_blank" rel="noopener" class="gcal-link-inline" style="text-decoration:none; display:inline-block;">Agenda</a>
           <button data-idx="${i}" class="use-feira">Usar</button>
         </div>
       </div>
@@ -1074,10 +1082,11 @@ async function openDay(dateObj){
     feirasList.querySelectorAll('.use-feira').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const e = allDay[parseInt(btn.dataset.idx)];
-        document.getElementById('fTipo').value = "feira";
-        toggleFeiraRefSelect();
         popFCidade();
         document.getElementById('fCidade').value = e.cidade;
+        document.getElementById('fBuscaLocal').value = "";
+        document.getElementById('fTipo').value = "feira";
+        toggleFeiraRefSelect();
         document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
         document.getElementById('fHorario').value = e.horario;
         document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
@@ -1088,6 +1097,8 @@ async function openDay(dateObj){
 
   await refreshRegistros();
   resetForm();
+  const formHead = document.getElementById('formHeading');
+  if(formHead){ setTimeout(()=> formHead.scrollIntoView({behavior:'smooth', block:'start'}), 60); }
 }
 function closeDayModal(){ document.getElementById('dayModalOverlay').classList.remove('open'); }
 async function refreshRegistros(){
@@ -1115,7 +1126,7 @@ async function refreshRegistros(){
           </div>
         </div>
         <div class="rc-actions">
-          <a href="${googleCalendarLink(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '))}" target="_blank" rel="noopener" class="gcal-link">Agenda</a>
+          <a href="${googleCalendarLink(r.titulo, selectedDate, r.horario, r.local||'', [r.pessoa?`Com: ${r.pessoa}`:'', r.obs||''].filter(Boolean).join(' — '), r.email||'')}" target="_blank" rel="noopener" class="gcal-link">Agenda</a>
           <button class="edit-reg">Editar</button>
           <button class="del-reg">Excluir</button>
         </div>
@@ -1128,18 +1139,22 @@ async function refreshRegistros(){
       const r = currentDayRegs.find(x=>x.id===id);
       if(!r) return;
       editingId = id;
-      document.getElementById('fTipo').value = r.tipo;
-      toggleFeiraRefSelect();
       popFCidade();
       document.getElementById('fCidade').value = r.cidade || "";
+      document.getElementById('fBuscaLocal').value = "";
+      document.getElementById('fTipo').value = r.tipo;
+      toggleFeiraRefSelect();
       document.getElementById('fTitulo').value = r.titulo || "";
       document.getElementById('fHorario').value = r.horario || "";
       document.getElementById('fPessoa').value = r.pessoa || "";
       document.getElementById('fLocal').value = r.local || "";
+      document.getElementById('fEmail').value = r.email || "";
       document.getElementById('fObs').value = r.obs || "";
       document.getElementById('btnSalvar').textContent = "Salvar alteração";
       document.getElementById('btnCancelEdit').style.display = "inline-block";
       document.getElementById('fTitulo').focus();
+      const formHead = document.getElementById('formHeading');
+      if(formHead){ formHead.scrollIntoView({behavior:'smooth', block:'start'}); }
     });
   });
   regList.querySelectorAll('.del-reg').forEach(btn=>{
@@ -1158,30 +1173,53 @@ async function refreshRegistros(){
 function toggleFeiraRefSelect(){
   const tipo = document.getElementById('fTipo').value;
   const ref = document.getElementById('fFeiraRef');
+  const busca = document.getElementById('fBuscaLocal');
   const campanhaRow = document.getElementById('campanhaRow');
+  const cidadeSel = document.getElementById('fCidade');
 
   if(tipo === "feira" && selectedDate){
-    const wd = weekdayNameFromDate(selectedDate);
-    const allDay = entriesFor("", "").filter(e=>e.dia===wd);
-    ref.innerHTML = '<option value="">— selecionar feira (opcional) —</option>' + allDay.map((e,i)=>`<option value="${i}">${e.cidade} — ${e.bairro} (${e.horario})</option>`).join("");
     ref.style.display = "block";
-    ref.onchange = ()=>{
-      if(ref.value===""){return;}
-      const e = allDay[parseInt(ref.value)];
-      if(document.getElementById('fCidade').value !== undefined){ document.getElementById('fCidade').value = e.cidade; }
-      document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
-      document.getElementById('fHorario').value = e.horario;
-      document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
-    };
+    busca.style.display = "block";
+    busca.placeholder = "Buscar local pelo nome…";
     campanhaRow.style.display = "none";
+    refreshFeiraOptions();
   } else if(tipo === "campanha"){
     ref.style.display = "none";
+    busca.style.display = "block";
+    busca.placeholder = "Buscar ponto de campanha pelo nome…";
     campanhaRow.style.display = "grid";
     popRegiaoCampanha();
   } else {
     ref.style.display = "none";
+    busca.style.display = "none";
     campanhaRow.style.display = "none";
   }
+}
+function refreshFeiraOptions(){
+  const ref = document.getElementById('fFeiraRef');
+  const cidade = document.getElementById('fCidade').value;
+  const busca = document.getElementById('fBuscaLocal').value.trim().toLowerCase();
+  if(!selectedDate) return;
+  const wd = weekdayNameFromDate(selectedDate);
+  let list = entriesFor(cidade, "").filter(e=>e.dia===wd);
+  if(busca){ list = list.filter(e => (e.bairro+" "+(e.endereco||"")+" "+e.cidade).toLowerCase().includes(busca)); }
+  window.__feiraOptions = list;
+
+  if(!cidade && !busca){
+    ref.innerHTML = '<option value="">Escolha uma cidade acima (ou busque pelo nome do local)</option>';
+  } else if(!list.length){
+    ref.innerHTML = '<option value="">Nenhuma feira encontrada nesse dia</option>';
+  } else {
+    ref.innerHTML = '<option value="">— selecionar feira —</option>' + list.map((e,i)=>`<option value="${i}">${cidade ? "" : e.cidade+" — "}${e.bairro} (${e.horario})</option>`).join("");
+  }
+  ref.onchange = ()=>{
+    if(ref.value===""){return;}
+    const e = window.__feiraOptions[parseInt(ref.value)];
+    document.getElementById('fCidade').value = e.cidade;
+    document.getElementById('fTitulo').value = `Ir à feira — ${e.bairro}`;
+    document.getElementById('fHorario').value = e.horario;
+    document.getElementById('fLocal').value = `${e.bairro}${e.endereco?", "+e.endereco:""} — ${e.cidade}`;
+  };
 }
 function popRegiaoCampanha(){
   const selR = document.getElementById('fRegiaoCampanha');
@@ -1191,16 +1229,32 @@ function popRegiaoCampanha(){
 }
 function popLocalCampanha(regiao){
   const selL = document.getElementById('fLocalCampanha');
-  if(!regiao){ selL.innerHTML = '<option value="">Local</option>'; selL.onchange = null; return; }
-  const pontos = pontosCampanha[regiao] || [];
-  selL.innerHTML = '<option value="">Local</option>' + pontos.map((p,i)=>`<option value="${i}">${p[0]}</option>`).join("");
+  const busca = document.getElementById('fBuscaLocal').value.trim().toLowerCase();
+  if(!regiao && !busca){ selL.innerHTML = '<option value="">Local</option>'; selL.onchange = null; window.__campanhaOptions = []; return; }
+
+  let pontos = [];
+  if(regiao){
+    pontos = (pontosCampanha[regiao]||[]).map(p=>({p, regiao}));
+  } else if(busca){
+    REGIOES_CAMPANHA.forEach(r=>{ (pontosCampanha[r]||[]).forEach(p=> pontos.push({p, regiao:r})); });
+  }
+  if(busca){ pontos = pontos.filter(x => (x.p[0]+" "+x.p[1]).toLowerCase().includes(busca)); }
+  window.__campanhaOptions = pontos;
+
+  if(!pontos.length){
+    selL.innerHTML = '<option value="">Nenhum local encontrado</option>';
+    selL.onchange = null;
+    return;
+  }
+  selL.innerHTML = '<option value="">Local</option>' + pontos.map((x,i)=>`<option value="${i}">${regiao ? "" : x.regiao+" — "}${x.p[0]}</option>`).join("");
   selL.onchange = ()=>{
     if(selL.value===""){return;}
-    const p = pontos[parseInt(selL.value)];
-    document.getElementById('fTitulo').value = `Ponto de campanha — ${p[0]}`;
-    document.getElementById('fHorario').value = p[2];
-    document.getElementById('fLocal').value = `${p[1]} — ${regiao}`;
-    document.getElementById('fObs').value = p[3] || "";
+    const x = window.__campanhaOptions[parseInt(selL.value)];
+    document.getElementById('fTitulo').value = `Ponto de campanha — ${x.p[0]}`;
+    document.getElementById('fHorario').value = x.p[2];
+    document.getElementById('fLocal').value = `${x.p[1]} — ${x.regiao}`;
+    document.getElementById('fObs').value = x.p[3] || "";
+    if(!regiao){ document.getElementById('fRegiaoCampanha').value = x.regiao; }
   };
 }
 function popFCidade(){
@@ -1209,14 +1263,16 @@ function popFCidade(){
 }
 function resetForm(){
   editingId = null;
-  document.getElementById('fTipo').value = "feira";
-  toggleFeiraRefSelect();
   popFCidade();
   document.getElementById('fCidade').value = "";
+  document.getElementById('fBuscaLocal').value = "";
+  document.getElementById('fTipo').value = "feira";
+  toggleFeiraRefSelect();
   document.getElementById('fTitulo').value = "";
   document.getElementById('fHorario').value = "";
   document.getElementById('fPessoa').value = "";
   document.getElementById('fLocal').value = "";
+  document.getElementById('fEmail').value = "";
   document.getElementById('fObs').value = "";
   document.getElementById('btnSalvar').textContent = "Salvar registro";
   document.getElementById('btnCancelEdit').style.display = "none";
@@ -1237,6 +1293,7 @@ async function handleSalvar(){
       horario: document.getElementById('fHorario').value.trim(),
       pessoa: document.getElementById('fPessoa').value.trim(),
       local: document.getElementById('fLocal').value.trim(),
+      email: document.getElementById('fEmail').value.trim(),
       obs: document.getElementById('fObs').value.trim(),
     };
     const y = selectedDate.getFullYear(), m = selectedDate.getMonth(), d = selectedDate.getDate();
@@ -1353,6 +1410,14 @@ document.getElementById('btnGoReport').addEventListener('click', ()=> switchView
 document.getElementById('closeDetail').addEventListener('click', closeDayModal);
 document.getElementById('dayModalOverlay').addEventListener('click', e=>{ if(e.target.id==='dayModalOverlay') closeDayModal(); });
 document.getElementById('fTipo').addEventListener('change', toggleFeiraRefSelect);
+document.getElementById('fCidade').addEventListener('change', ()=>{
+  if(document.getElementById('fTipo').value === 'feira'){ refreshFeiraOptions(); }
+});
+document.getElementById('fBuscaLocal').addEventListener('input', ()=>{
+  const tipo = document.getElementById('fTipo').value;
+  if(tipo === 'feira'){ refreshFeiraOptions(); }
+  else if(tipo === 'campanha'){ popLocalCampanha(document.getElementById('fRegiaoCampanha').value); }
+});
 document.getElementById('btnSalvar').addEventListener('click', handleSalvar);
 document.getElementById('btnCancelEdit').addEventListener('click', resetForm);
 document.getElementById('printDayBtn').addEventListener('click', printDayAgenda);
@@ -1381,6 +1446,28 @@ document.getElementById('btnExportICS').addEventListener('click', ()=>{
   });
   const labelMap = {week:"semana", month:"mes", "60days":"60dias", augoct:"ago-out-2026"};
   downloadICS(`agenda-feiras-${labelMap[currentReport.type]||"periodo"}.ics`, events);
+});
+
+document.getElementById('btnLimparTudo').addEventListener('click', ()=>{
+  const step1 = window.confirm("Isso vai apagar TODOS os seus registros salvos (reuniões, campanha, visitas etc.) neste navegador. As feiras oficiais não são afetadas. Não pode ser desfeito. Continuar?");
+  if(!step1) return;
+  const step2 = window.confirm("Tem certeza mesmo? Todos os registros cadastrados serão perdidos permanentemente.");
+  if(!step2) return;
+  try{
+    const toRemove = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('evt:')===0) toRemove.push(k);
+    }
+    toRemove.forEach(k=>localStorage.removeItem(k));
+  }catch(e){ console.error('Erro ao limpar localStorage:', e); }
+  Object.keys(memStore).forEach(k=>delete memStore[k]);
+  currentReport = {type:null, start:null, end:null, grouped:[]};
+  document.getElementById('reportBody').innerHTML = `<div class="loading-txt">Selecione um período acima.</div>`;
+  document.querySelectorAll('.rep-presets button').forEach(b=>b.classList.remove('active'));
+  buildCalendar();
+  renderAgendaDia();
+  alert("Todos os registros foram apagados. Você pode cadastrar tudo do zero.");
 });
 document.querySelectorAll('.rep-presets button').forEach(btn=> btn.addEventListener('click', ()=>buildReport(btn.dataset.range)));
 document.querySelectorAll('.tab-btn').forEach(btn=> btn.addEventListener('click', ()=>switchView(btn.dataset.view)));
