@@ -1,4 +1,4 @@
-const CACHE_NAME = "feiras-vp-cache-v2";
+const CACHE_NAME = "feiras-vp-cache-v3";
 const ASSETS = [
   "./manifest.json",
   "./icons/icon-192.png",
