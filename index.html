@@ -357,11 +357,26 @@
   .btn-reaprovar:hover{background:#CDEFD3;}
 
   /* ---------------- CAMPANHA (apoiadores / material) ---------------- */
-  .camp-tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
-  .camp-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px;}
-  .camp-stats .stat-box{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px;}
-  .camp-stats .stat-box .n{font-family:'IBM Plex Sans',sans-serif; font-weight:800; font-size:20px; color:var(--navy);}
-  .camp-stats .stat-box .l{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+  .camp-tabs-row{display:flex; gap:0; border-bottom:1.5px solid var(--line); margin-bottom:16px;}
+  .camp-tab{
+    flex:1; background:none; border:none; padding:11px 4px; font-family:'IBM Plex Sans',sans-serif;
+    font-weight:700; font-size:12.5px; letter-spacing:.02em; color:var(--ink-soft); cursor:pointer;
+    border-bottom:2.5px solid transparent; margin-bottom:-1.5px; text-transform:uppercase;
+  }
+  .camp-tab.active{color:var(--blue); border-bottom-color:var(--blue);}
+  .camp-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px;}
+  .camp-stats .stat-box{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius-md); padding:12px 14px;
+    display:flex; align-items:center; gap:11px;
+  }
+  .camp-stats .stat-box .icon-avatar{
+    width:40px; height:40px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center;
+  }
+  .camp-stats .stat-box:nth-child(1) .icon-avatar{background:var(--blue-soft); color:var(--blue);}
+  .camp-stats .stat-box:nth-child(2) .icon-avatar{background:#FFF3D9; color:#B5680B;}
+  .camp-stats .stat-box:nth-child(3) .icon-avatar{background:#E1F5E4; color:#1E6B2E;}
+  .camp-stats .stat-box .n{font-family:'IBM Plex Sans',sans-serif; font-weight:800; font-size:19px; color:var(--ink); line-height:1.15;}
+  .camp-stats .stat-box .l{font-size:11px; color:var(--ink-soft); margin-top:1px; line-height:1.3;}
   .ap-card, .mat-card{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px;}
   .ap-card .ap-top, .mat-card .mat-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
   .ap-card .ap-nome{font-weight:600; font-size:13.5px;}
@@ -374,6 +389,16 @@
   .mat-card .mat-tipo{font-weight:700; font-size:13.5px; color:var(--navy);}
   .mat-bar{height:6px; background:var(--line); border-radius:4px; overflow:hidden; margin-top:6px;}
   .mat-bar .fill{height:100%; background:var(--blue);}
+
+  /* ---------------- CABEÇALHO AZUL DE TELAS INTERNAS (Minha Conta / Alterar senha / Campanha) ---------------- */
+  .inner-blue-header{
+    background:linear-gradient(150deg, var(--navy), var(--navy-2) 70%); color:#fff;
+    padding:16px 18px; display:flex; align-items:center; gap:12px; margin:-16px -14px 18px -14px;
+    border-radius:0 0 16px 16px;
+  }
+  .inner-blue-header.in-card{ margin:-28px -24px 22px -24px; padding:20px 24px; border-radius:20px 20px 16px 16px; }
+  .inner-blue-header .auth-back{background:rgba(255,255,255,0.15); color:#fff; margin-bottom:0;}
+  .inner-blue-header h2{color:#fff; margin:0; text-align:left; font-size:16px;}
 
   /* ---------------- TOAST GLOBAL ---------------- */
   .toast-el{
@@ -650,8 +675,10 @@
 <!-- ===================== MINHA CONTA ===================== -->
 <div class="auth-screen" id="accountScreen" style="display:none;">
   <div class="auth-card">
-    <button class="auth-back" data-back="__appShell" aria-label="Voltar">←</button>
-    <h2 style="text-align:center;">Minha conta</h2>
+    <div class="inner-blue-header in-card">
+      <button class="auth-back" data-back="__appShell" aria-label="Voltar">←</button>
+      <h2>Minha conta</h2>
+    </div>
     <div class="account-profile">
       <div class="account-avatar" id="accAvatar">?</div>
       <div>
@@ -673,8 +700,10 @@
 <!-- ===================== DADOS PESSOAIS ===================== -->
 <div class="auth-screen" id="dadosPessoaisScreen" style="display:none;">
   <div class="auth-card">
-    <button class="auth-back" data-back="accountScreen" aria-label="Voltar">←</button>
-    <h2 style="text-align:center;">Dados pessoais</h2>
+    <div class="inner-blue-header in-card">
+      <button class="auth-back" data-back="accountScreen" aria-label="Voltar">←</button>
+      <h2>Dados pessoais</h2>
+    </div>
     <label class="auth-label">Nome</label>
     <input id="dpNome" placeholder="Seu nome">
     <label class="auth-label">E-mail</label>
@@ -687,8 +716,10 @@
 <!-- ===================== ALTERAR SENHA (autenticado) ===================== -->
 <div class="auth-screen" id="changePwScreen" style="display:none;">
   <div class="auth-card">
-    <button class="auth-back" data-back="accountScreen" aria-label="Voltar">←</button>
-    <h2 style="text-align:center;">Alterar senha</h2>
+    <div class="inner-blue-header in-card">
+      <button class="auth-back" data-back="accountScreen" aria-label="Voltar">←</button>
+      <h2>Alterar senha</h2>
+    </div>
     <p class="sub" style="text-align:center;">Sua nova senha deve ser diferente das usadas anteriormente.</p>
     <label class="auth-label">Nova senha</label>
     <div class="pwd-wrap">
@@ -844,8 +875,8 @@
     </section>
 
     <section id="view-campanha" class="view">
-      <div class="section-head"><h3>Campanha</h3></div>
-      <div class="rep-presets">
+      <div class="inner-blue-header"><h2>Campanha</h2></div>
+      <div class="camp-tabs-row">
         <button data-camp="apoiadores" class="camp-tab active">Apoiadores</button>
         <button data-camp="materiais" class="camp-tab">Material</button>
       </div>
@@ -2629,10 +2660,13 @@ async function renderApoiadores(){
   const total = (data||[]).length;
   const comConsentimento = (data||[]).filter(a=>a.consentimento).length;
   const pct = total>0 ? Math.round(100*comConsentimento/total) : 0;
+  const icoPessoas = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="8" r="2.3" stroke="currentColor" stroke-width="1.7"/><path d="M15.5 14.3c2.6.3 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  const icoCheck = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19.5 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const icoPct = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M5 20V11M12 20V4M19 20v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   document.getElementById('apoiadoresStats').innerHTML = `
-    <div class="stat-box"><div class="n">${total}</div><div class="l">Apoiadores cadastrados</div></div>
-    <div class="stat-box"><div class="n">${comConsentimento}</div><div class="l">Autorizaram contato</div></div>
-    <div class="stat-box"><div class="n">${pct}%</div><div class="l">Percentual autorizado</div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoPessoas}</div><div><div class="n">${total}</div><div class="l">Apoiadores cadastrados</div></div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoCheck}</div><div><div class="n">${comConsentimento}</div><div class="l">Autorizaram contato</div></div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoPct}</div><div><div class="n">${pct}%</div><div class="l">Percentual autorizado</div></div></div>
   `;
 
   if(!total){ list.innerHTML = emptyStateHtml('Nenhum apoiador cadastrado', 'As pessoas cadastradas por você e sua equipe aparecerão aqui.', '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="17" cy="8" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 14.3c2.6.3 4.5 2.6 4.5 5.7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'); return; }
@@ -2743,10 +2777,13 @@ async function renderMateriais(){
   const totalRecebida = (data||[]).reduce((s,m)=>s+(m.quantidade_recebida||0),0);
   const totalDistribuida = (data||[]).reduce((s,m)=>s+(m.quantidade_distribuida||0),0);
   const saldo = totalRecebida - totalDistribuida;
+  const icoRecebido = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 4v11m0 0-4-4m4 4 4-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  const icoDistribuido = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 20V9m0 0 4 4m-4-4-4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 5v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  const icoSaldo = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><path d="M8 9h8M8 13h8M8 17h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
   document.getElementById('materiaisStats').innerHTML = `
-    <div class="stat-box"><div class="n">${totalRecebida}</div><div class="l">Total recebido</div></div>
-    <div class="stat-box"><div class="n">${totalDistribuida}</div><div class="l">Total distribuído</div></div>
-    <div class="stat-box"><div class="n" style="color:${saldo<0?'#B3261E':'#1E6B2E'};">${saldo}</div><div class="l">Saldo disponível</div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoRecebido}</div><div><div class="n">${totalRecebida}</div><div class="l">Total recebido</div></div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoDistribuido}</div><div><div class="n">${totalDistribuida}</div><div class="l">Total distribuído</div></div></div>
+    <div class="stat-box"><div class="icon-avatar">${icoSaldo}</div><div><div class="n" style="color:${saldo<0?'#B3261E':'inherit'};">${saldo}</div><div class="l">Saldo disponível</div></div></div>
   `;
 
   if(!(data||[]).length){ list.innerHTML = emptyStateHtml('Nenhum material registrado', 'As movimentações de material cadastradas aparecerão aqui.', '<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3.5 8.5 12 4l8.5 4.5L12 13 3.5 8.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3.5 8.5V16L12 20l8.5-4V8.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 13v7" stroke="currentColor" stroke-width="1.6"/></svg>'); return; }
